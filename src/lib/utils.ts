@@ -85,3 +85,74 @@ export function evaluateImageQuality(width: number, height: number): ImageQualit
     };
   }
 }
+
+/**
+ * Redimensiona e comprime uma imagem no lado do cliente para otimizar performance,
+ * evitar limites de memória e não estourar a cota de 5MB do localStorage.
+ */
+export function compressAndResizeImage(
+  file: File,
+  maxDimension = 2000
+): Promise<{ dataUrl: string; width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    // Aceita tipos de imagem padrão e HEIC (para fallback)
+    if (!file.type.startsWith("image/") && !file.name.toLowerCase().endsWith(".heic")) {
+      reject(new Error("O arquivo selecionado não é uma imagem válida."));
+      return;
+    }
+
+    const imageUrl = URL.createObjectURL(file);
+    const img = new Image();
+
+    img.onload = () => {
+      URL.revokeObjectURL(imageUrl);
+
+      let width = img.naturalWidth;
+      let height = img.naturalHeight;
+
+      // Calcular novas dimensões mantendo o aspect ratio
+      if (width > maxDimension || height > maxDimension) {
+        if (width > height) {
+          height = Math.round((height * maxDimension) / width);
+          width = maxDimension;
+        } else {
+          width = Math.round((width * maxDimension) / height);
+          height = maxDimension;
+        }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("Não foi possível obter o contexto do canvas."));
+        return;
+      }
+
+      // Desenhar a imagem redimensionada
+      ctx.drawImage(img, 0, 0, width, height);
+
+      try {
+        // Converter para JPEG com 85% de qualidade (balanço ideal entre peso e nitidez)
+        const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+        resolve({
+          dataUrl: compressedDataUrl,
+          width,
+          height,
+        });
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    img.onerror = (err) => {
+      URL.revokeObjectURL(imageUrl);
+      reject(err);
+    };
+
+    img.src = imageUrl;
+  });
+}
+

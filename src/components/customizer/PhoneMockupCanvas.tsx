@@ -36,8 +36,12 @@ export default function PhoneMockupCanvas({
     }
 
     const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = customization.imageUrl;
+    
+    // Só define crossOrigin para URLs remotas (evita bug de CORS com Base64/Blob no Safari)
+    if (customization.imageUrl.startsWith("http")) {
+      img.crossOrigin = "anonymous";
+    }
+
     img.onload = () => {
       imageElementRef.current = img;
       setImageLoaded(true);
@@ -49,6 +53,13 @@ export default function PhoneMockupCanvas({
         qualityRating: quality,
       });
     };
+
+    img.onerror = (err) => {
+      console.error("Erro ao carregar imagem no mockup:", err);
+      setImageLoaded(false);
+    };
+
+    img.src = customization.imageUrl;
   }, [customization.imageUrl]);
 
   // Função para desenhar o Canvas do Mockup

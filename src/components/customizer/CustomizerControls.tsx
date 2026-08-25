@@ -2,6 +2,7 @@
 
 import React, { useRef } from "react";
 import { CustomizationConfig } from "@/types";
+import { compressAndResizeImage } from "@/lib/utils";
 import {
   Upload,
   RotateCw,
@@ -46,23 +47,35 @@ export default function CustomizerControls({
 }: CustomizerControlsProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        onChange({
-          imageUrl: event.target.result as string,
-          imageFileName: file.name,
-          scale: 1,
-          position: { x: 0, y: 0 },
-          rotation: 0,
-        });
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const result = await compressAndResizeImage(file);
+      onChange({
+        imageUrl: result.dataUrl,
+        imageFileName: file.name,
+        scale: 1,
+        position: { x: 0, y: 0 },
+        rotation: 0,
+      });
+    } catch (err) {
+      console.warn("Erro ao comprimir imagem, tentando fallback:", err);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          onChange({
+            imageUrl: event.target.result as string,
+            imageFileName: file.name,
+            scale: 1,
+            position: { x: 0, y: 0 },
+            rotation: 0,
+          });
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleRotate = () => {
@@ -105,9 +118,9 @@ export default function CustomizerControls({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/png, image/jpeg, image/webp, image/heic"
+          accept="image/*"
           onChange={handleFileUpload}
-          className="hidden"
+          className="sr-only"
           id="photo-upload-input"
         />
 
