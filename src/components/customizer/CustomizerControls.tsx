@@ -120,8 +120,7 @@ export default function CustomizerControls({
           type="file"
           accept="image/*"
           onChange={handleFileUpload}
-          className="sr-only"
-          id="photo-upload-input"
+         
         />
 
         {!customization.imageUrl ? (
