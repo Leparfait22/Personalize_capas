@@ -47,6 +47,10 @@ export default function CustomizerControls({
 }: CustomizerControlsProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const handleOpenFilePicker = () => {
+    fileInputRef.current?.click();
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -100,12 +104,13 @@ export default function CustomizerControls({
       {/* 1. Upload de Imagem */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <label className="text-sm font-bold text-zinc-950 flex items-center gap-2 font-display">
+          <span className="text-sm font-bold text-zinc-950 flex items-center gap-2 font-display">
             <ImageIcon className="w-4 h-4 text-zinc-950" />
             1. Sua Foto ou Arte
-          </label>
+          </span>
           {customization.imageUrl && (
             <button
+              type="button"
               onClick={handleRemoveImage}
               className="text-xs text-rose-600 hover:text-rose-700 font-semibold flex items-center gap-1 transition-colors"
             >
@@ -120,13 +125,14 @@ export default function CustomizerControls({
           type="file"
           accept="image/*"
           onChange={handleFileUpload}
-         
+          className="sr-only"
         />
 
         {!customization.imageUrl ? (
-          <label
-            htmlFor="photo-upload-input"
-            className="flex flex-col items-center justify-center p-7 border-2 border-dashed border-zinc-300 hover:border-zinc-950 rounded-2xl bg-zinc-50/70 hover:bg-zinc-100/70 cursor-pointer transition-all duration-200 text-center group"
+          <button
+            type="button"
+            onClick={handleOpenFilePicker}
+            className="w-full flex flex-col items-center justify-center p-7 border-2 border-dashed border-zinc-300 hover:border-zinc-950 rounded-2xl bg-zinc-50/70 hover:bg-zinc-100/70 cursor-pointer transition-all duration-200 text-center group"
           >
             <div className="w-12 h-12 rounded-full bg-zinc-950 flex items-center justify-center text-white group-hover:scale-105 transition-transform mb-3 shadow-md shadow-zinc-950/10">
               <Upload className="w-5 h-5 text-white" />
@@ -137,7 +143,7 @@ export default function CustomizerControls({
             <span className="text-xs text-zinc-500">
               Formatos aceitos: JPG, PNG ou WEBP (Alta Resolução)
             </span>
-          </label>
+          </button>
         ) : (
           <div className="flex items-center justify-between p-3.5 bg-zinc-50 rounded-xl border border-zinc-200 gap-3">
             <div className="flex items-center gap-3 overflow-hidden min-w-0">
@@ -160,13 +166,14 @@ export default function CustomizerControls({
               </div>
             </div>
 
-            <label
-              htmlFor="photo-upload-input"
+            <button
+              type="button"
+              onClick={handleOpenFilePicker}
               className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-zinc-950 hover:bg-zinc-800 border border-zinc-950 px-3.5 py-2 rounded-xl cursor-pointer transition-all shadow-sm hover:scale-[1.02] active:scale-[0.98] shrink-0"
             >
               <Upload className="w-3.5 h-3.5 text-white" />
               <span>Carregar Minha Foto</span>
-            </label>
+            </button>
           </div>
         )}
       </div>
