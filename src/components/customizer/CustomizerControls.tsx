@@ -217,15 +217,14 @@ export default function CustomizerControls({
       {/* 3. Indicador de Qualidade da Imagem */}
       {customization.qualityRating && (
         <div
-          className={`p-3.5 rounded-xl border flex items-start gap-3 text-xs ${
-            customization.qualityRating.score === "excellent" ||
-            customization.qualityRating.score === "good"
+          className={`p-3.5 rounded-xl border flex items-start gap-3 text-xs ${customization.qualityRating.score === "excellent" ||
+              customization.qualityRating.score === "good"
               ? "bg-emerald-50/80 border-emerald-200 text-emerald-950"
               : "bg-amber-50/80 border-amber-200 text-amber-950"
-          }`}
+            }`}
         >
           {customization.qualityRating.score === "excellent" ||
-          customization.qualityRating.score === "good" ? (
+            customization.qualityRating.score === "good" ? (
             <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5 text-emerald-600" />
           ) : (
             <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-amber-600" />

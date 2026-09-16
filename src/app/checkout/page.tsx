@@ -4,18 +4,28 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
-import { formatCurrency } from "@/lib/utils";
-import { saveNewOrder } from "@/lib/storage";
+import {
+  formatCurrency,
+  sanitizeInput,
+  formatCPFMask,
+  formatPhoneMask,
+  formatCEPMask,
+  formatCardMask,
+  formatExpiryMask,
+  isValidCPF,
+  isValidWhatsApp,
+  isValidEmail,
+} from "@/lib/utils";
+import { saveNewOrderApi } from "@/lib/storage";
 import { Order } from "@/types";
 import {
   Lock,
-  Truck,
   CreditCard,
   QrCode,
   ShieldCheck,
   ChevronLeft,
-  Search,
-  Check,
+  AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
 
 export default function CheckoutPage() {
@@ -24,6 +34,7 @@ export default function CheckoutPage() {
 
   const [loading, setLoading] = useState(false);
   const [cepLoading, setCepLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -60,10 +71,10 @@ export default function CheckoutPage() {
         if (!data.erro) {
           setFormData((prev) => ({
             ...prev,
-            street: data.logradouro || "",
-            neighborhood: data.bairro || "",
-            city: data.localidade || "",
-            state: data.uf || "",
+            street: sanitizeInput(data.logradouro || ""),
+            neighborhood: sanitizeInput(data.bairro || ""),
+            city: sanitizeInput(data.localidade || ""),
+            state: sanitizeInput(data.uf || "").toUpperCase(),
           }));
         }
       } catch (err) {
@@ -74,9 +85,30 @@ export default function CheckoutPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
+
     if (items.length === 0) return;
+
+    // 🔒 Validações de Segurança e Formato de Entrada
+    const cleanCPF = formData.cpf.replace(/\D/g, "");
+    const cleanWhatsApp = formData.whatsapp.replace(/\D/g, "");
+
+    if (!isValidCPF(cleanCPF)) {
+      setErrorMessage("Por favor, informe um número de CPF válido (com 11 dígitos corretos).");
+      return;
+    }
+
+    if (!isValidWhatsApp(cleanWhatsApp)) {
+      setErrorMessage("Por favor, informe um WhatsApp válido com DDD (Ex: 11 99999-9999).");
+      return;
+    }
+
+    if (!isValidEmail(formData.email)) {
+      setErrorMessage("Por favor, informe um e-mail válido.");
+      return;
+    }
 
     setLoading(true);
 
@@ -84,23 +116,24 @@ export default function CheckoutPage() {
     const orderId = `ord_${Date.now()}`;
     const orderNumber = `SC-${randomNum}`;
 
+    // 🛡️ Sanitização Anti-XSS rigorosa para todos os campos gravados no banco
     const newOrder: Order = {
       id: orderId,
       orderNumber: orderNumber,
       customer: {
-        name: formData.name,
-        email: formData.email,
-        whatsapp: formData.whatsapp,
-        cpf: formData.cpf,
+        name: sanitizeInput(formData.name).trim(),
+        email: sanitizeInput(formData.email.toLowerCase()).trim(),
+        whatsapp: formatPhoneMask(formData.whatsapp),
+        cpf: formatCPFMask(formData.cpf),
       },
       shippingAddress: {
-        zipCode: formData.zipCode,
-        street: formData.street,
-        number: formData.number,
-        complement: formData.complement,
-        neighborhood: formData.neighborhood,
-        city: formData.city,
-        state: formData.state,
+        zipCode: formatCEPMask(formData.zipCode),
+        street: sanitizeInput(formData.street).trim(),
+        number: sanitizeInput(formData.number).trim(),
+        complement: sanitizeInput(formData.complement).trim(),
+        neighborhood: sanitizeInput(formData.neighborhood).trim(),
+        city: sanitizeInput(formData.city).trim(),
+        state: sanitizeInput(formData.state.toUpperCase()).trim(),
       },
       items: [...items],
       subtotal,
@@ -114,13 +147,16 @@ export default function CheckoutPage() {
       updatedAt: new Date().toISOString(),
     };
 
-    // Salvar pedido no storage
-    saveNewOrder(newOrder);
-
-    setTimeout(() => {
+    try {
+      // Salvar pedido via API Backend (Supabase)
+      await saveNewOrderApi(newOrder);
       clearCart();
       router.push(`/order-success/${orderId}`);
-    }, 600);
+    } catch (err) {
+      console.error("Erro ao salvar pedido:", err);
+      setErrorMessage("Ocorreu um erro ao processar seu pedido. Tente novamente.");
+      setLoading(false);
+    }
   };
 
   if (items.length === 0) {
@@ -144,6 +180,9 @@ export default function CheckoutPage() {
 
   const finalTotal = paymentMethod === "pix" ? total - subtotal * 0.05 : total;
 
+  const isCPFValid = formData.cpf.replace(/\D/g, "").length === 11 ? isValidCPF(formData.cpf) : null;
+  const isWhatsAppValid = formData.whatsapp.replace(/\D/g, "").length >= 10 ? isValidWhatsApp(formData.whatsapp) : null;
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Botão Voltar */}
@@ -160,6 +199,15 @@ export default function CheckoutPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Formulário Principal */}
         <form onSubmit={handleSubmit} className="lg:col-span-7 space-y-6">
+
+          {/* Banner de Erro/Validação */}
+          {errorMessage && (
+            <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-3 text-rose-950 text-xs font-semibold animate-fade-in shadow-sm">
+              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
           {/* 1. Dados Pessoais */}
           <div className="p-6 bg-white rounded-2xl border border-zinc-200 shadow-[0_4px_20px_rgb(0,0,0,0.03)] space-y-4">
             <h3 className="text-sm font-bold text-zinc-950 flex items-center gap-2 font-display">
@@ -177,7 +225,7 @@ export default function CheckoutPage() {
                   required
                   placeholder="Ex: João da Silva"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, name: sanitizeInput(e.target.value) })}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-2.5 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 transition-all"
                 />
               </div>
@@ -189,33 +237,65 @@ export default function CheckoutPage() {
                   required
                   placeholder="seu@email.com"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value.trim() })}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-2.5 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-zinc-700 font-semibold mb-1">WhatsApp (para rastreio) *</label>
-                <input
-                  type="tel"
-                  required
-                  placeholder="(11) 99999-9999"
-                  value={formData.whatsapp}
-                  onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-2.5 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 transition-all"
-                />
+                <label className="block text-zinc-700 font-semibold mb-1">Contato *</label>
+                <div className="relative">
+                  <input
+                    type="tel"
+                    required
+                    placeholder="(11) 99999-9999"
+                    value={formData.whatsapp}
+                    onChange={(e) => setFormData({ ...formData, whatsapp: formatPhoneMask(e.target.value) })}
+                    className={`w-full bg-zinc-50 border rounded-xl px-3.5 py-2.5 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 transition-all ${
+                      isWhatsAppValid === false
+                        ? "border-rose-400 focus:border-rose-600 focus:ring-rose-500/10"
+                        : isWhatsAppValid === true
+                        ? "border-emerald-400 focus:border-emerald-600 focus:ring-emerald-500/10"
+                        : "border-zinc-200 focus:border-zinc-950 focus:ring-zinc-950/10"
+                    }`}
+                  />
+                  {isWhatsAppValid === true && (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 absolute right-3 top-3" />
+                  )}
+                </div>
+                {isWhatsAppValid === false && (
+                  <span className="text-[10px] font-semibold text-rose-600 mt-1 block">
+                    Número de WhatsApp inválido (DDD + número)
+                  </span>
+                )}
               </div>
 
               <div>
-                <label className="block text-zinc-700 font-semibold mb-1">CPF (para nota fiscal) *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="000.000.000-00"
-                  value={formData.cpf}
-                  onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-2.5 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 transition-all"
-                />
+                <label className="block text-zinc-700 font-semibold mb-1">CPF *</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    placeholder="000.000.000-00"
+                    value={formData.cpf}
+                    onChange={(e) => setFormData({ ...formData, cpf: formatCPFMask(e.target.value) })}
+                    className={`w-full bg-zinc-50 border rounded-xl px-3.5 py-2.5 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 transition-all ${
+                      isCPFValid === false
+                        ? "border-rose-400 focus:border-rose-600 focus:ring-rose-500/10"
+                        : isCPFValid === true
+                        ? "border-emerald-400 focus:border-emerald-600 focus:ring-emerald-500/10"
+                        : "border-zinc-200 focus:border-zinc-950 focus:ring-zinc-950/10"
+                    }`}
+                  />
+                  {isCPFValid === true && (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 absolute right-3 top-3" />
+                  )}
+                </div>
+                {isCPFValid === false && (
+                  <span className="text-[10px] font-semibold text-rose-600 mt-1 block">
+                    CPF inválido (confira os 11 dígitos)
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -239,7 +319,7 @@ export default function CheckoutPage() {
                     placeholder="00000-000"
                     maxLength={9}
                     value={formData.zipCode}
-                    onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, zipCode: formatCEPMask(e.target.value) })}
                     onBlur={handleCepBlur}
                     className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-2.5 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 transition-all"
                   />
@@ -256,7 +336,7 @@ export default function CheckoutPage() {
                   required
                   placeholder="Nome da rua"
                   value={formData.street}
-                  onChange={(e) => setFormData({ ...formData, street: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, street: sanitizeInput(e.target.value) })}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-2.5 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 transition-all"
                 />
               </div>
@@ -268,7 +348,7 @@ export default function CheckoutPage() {
                   required
                   placeholder="Ex: 123"
                   value={formData.number}
-                  onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, number: sanitizeInput(e.target.value) })}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-2.5 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 transition-all"
                 />
               </div>
@@ -279,7 +359,7 @@ export default function CheckoutPage() {
                   type="text"
                   placeholder="Apto, Bloco (Opcional)"
                   value={formData.complement}
-                  onChange={(e) => setFormData({ ...formData, complement: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, complement: sanitizeInput(e.target.value) })}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-2.5 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 transition-all"
                 />
               </div>
@@ -291,7 +371,7 @@ export default function CheckoutPage() {
                   required
                   placeholder="Bairro"
                   value={formData.neighborhood}
-                  onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, neighborhood: sanitizeInput(e.target.value) })}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-2.5 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 transition-all"
                 />
               </div>
@@ -303,7 +383,7 @@ export default function CheckoutPage() {
                   required
                   placeholder="Cidade"
                   value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, city: sanitizeInput(e.target.value) })}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-2.5 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 transition-all"
                 />
               </div>
@@ -316,7 +396,7 @@ export default function CheckoutPage() {
                   maxLength={2}
                   placeholder="SP"
                   value={formData.state}
-                  onChange={(e) => setFormData({ ...formData, state: e.target.value.toUpperCase() })}
+                  onChange={(e) => setFormData({ ...formData, state: sanitizeInput(e.target.value).toUpperCase() })}
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-2.5 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 transition-all"
                 />
               </div>
@@ -391,7 +471,7 @@ export default function CheckoutPage() {
                     type="text"
                     placeholder="0000 0000 0000 0000"
                     value={cardData.number}
-                    onChange={(e) => setCardData({ ...cardData, number: e.target.value })}
+                    onChange={(e) => setCardData({ ...cardData, number: formatCardMask(e.target.value) })}
                     className="w-full bg-white border border-zinc-200 rounded-xl px-3.5 py-2.5 text-zinc-900 focus:outline-none focus:border-zinc-950"
                   />
                 </div>
@@ -403,7 +483,7 @@ export default function CheckoutPage() {
                       type="text"
                       placeholder="12/28"
                       value={cardData.expiry}
-                      onChange={(e) => setCardData({ ...cardData, expiry: e.target.value })}
+                      onChange={(e) => setCardData({ ...cardData, expiry: formatExpiryMask(e.target.value) })}
                       className="w-full bg-white border border-zinc-200 rounded-xl px-3.5 py-2.5 text-zinc-900 focus:outline-none focus:border-zinc-950"
                     />
                   </div>
@@ -415,7 +495,7 @@ export default function CheckoutPage() {
                       placeholder="123"
                       maxLength={4}
                       value={cardData.cvv}
-                      onChange={(e) => setCardData({ ...cardData, cvv: e.target.value })}
+                      onChange={(e) => setCardData({ ...cardData, cvv: e.target.value.replace(/\D/g, "") })}
                       className="w-full bg-white border border-zinc-200 rounded-xl px-3.5 py-2.5 text-zinc-900 focus:outline-none focus:border-zinc-950"
                     />
                   </div>

@@ -417,11 +417,11 @@ export default function PhoneMockupCanvas({
     }
 
     try {
-      const mockupUrl = canvas.toDataURL("image/png", 0.95);
+      const mockupUrl = canvas.toDataURL("image/jpeg", 0.82);
 
       // Gerar arte em Alta Resolução (300 DPI - ~1200x2400) sem o overlay da capa
       const highResCanvas = document.createElement("canvas");
-      const hrWidth = 1400;
+      const hrWidth = 1200;
       const hrHeight = Math.round(hrWidth / model.aspectRatio);
       highResCanvas.width = hrWidth;
       highResCanvas.height = hrHeight;
@@ -459,7 +459,7 @@ export default function PhoneMockupCanvas({
         }
       }
 
-      const highResUrl = highResCanvas.toDataURL("image/png", 1.0);
+      const highResUrl = highResCanvas.toDataURL("image/jpeg", 0.85);
       return { mockupUrl, highResUrl };
     } catch (err) {
       console.warn("Canvas export fallback:", err);

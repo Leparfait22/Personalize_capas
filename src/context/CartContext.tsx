@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { CartItem } from "@/types";
+import { getOrCreateCartSessionId } from "@/lib/session";
 
 interface CartContextType {
   items: CartItem[];
@@ -15,6 +16,7 @@ interface CartContextType {
   subtotal: number;
   shippingCost: number;
   total: number;
+  sessionId: string;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -25,28 +27,60 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [sessionId, setSessionId] = useState<string>("");
 
-  // Carregar itens do localStorage na inicialização
+  // Inicializar ID de Sessão e carregar itens do Banco de Dados / localStorage
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(CART_STORAGE_KEY);
-      if (saved) {
-        setItems(JSON.parse(saved));
+    const sid = getOrCreateCartSessionId();
+    setSessionId(sid);
+
+    async function loadCart() {
+      try {
+        // Tentar buscar do banco de dados via API
+        const res = await fetch(`/api/cart?sessionId=${sid}`);
+        if (res.ok) {
+          const remoteItems: CartItem[] = await res.json();
+          if (remoteItems && remoteItems.length > 0) {
+            setItems(remoteItems);
+            setIsLoaded(true);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("API de carrinho indisponível, usando fallback local:", err);
       }
-    } catch (e) {
-      console.error("Erro ao carregar carrinho:", e);
-    } finally {
-      setIsLoaded(true);
+
+      // Fallback local caso a API não retorne dados
+      try {
+        const saved = localStorage.getItem(CART_STORAGE_KEY);
+        if (saved) {
+          setItems(JSON.parse(saved));
+        }
+      } catch (e) {
+        console.error("Erro ao carregar carrinho local:", e);
+      } finally {
+        setIsLoaded(true);
+      }
     }
+
+    loadCart();
   }, []);
 
-  // Salvar no localStorage sempre que os itens mudarem
+  // Salvar backup leve no localStorage por segurança extra
   useEffect(() => {
     if (!isLoaded) return;
     try {
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-    } catch (e) {
-      console.error("Erro ao salvar carrinho:", e);
+    } catch {
+      try {
+        const lightweightItems = items.map((item) => ({
+          ...item,
+          highResPrintUrl: item.previewMockupUrl || item.customization.imageUrl,
+        }));
+        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(lightweightItems));
+      } catch (err2) {
+        console.error("Erro ao salvar backup no localStorage:", err2);
+      }
     }
   }, [items, isLoaded]);
 
@@ -58,12 +92,26 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       totalPrice: itemData.unitPrice * itemData.quantity,
     };
 
+    // Atualização instantânea na interface
     setItems((prev) => [newItem, ...prev]);
     setIsCartOpen(true);
+
+    // Persistir em segundo plano no Banco de Dados (Supabase)
+    const sid = sessionId || getOrCreateCartSessionId();
+    fetch("/api/cart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId: sid, item: newItem }),
+    }).catch((err) => console.error("Erro ao salvar item no banco:", err));
   };
 
   const removeItem = (itemId: string) => {
     setItems((prev) => prev.filter((i) => i.id !== itemId));
+
+    const sid = sessionId || getOrCreateCartSessionId();
+    fetch(`/api/cart?sessionId=${sid}&itemId=${itemId}`, {
+      method: "DELETE",
+    }).catch((err) => console.error("Erro ao deletar item do banco:", err));
   };
 
   const updateQuantity = (itemId: string, quantity: number) => {
@@ -71,26 +119,43 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       removeItem(itemId);
       return;
     }
+
+    let updatedItem: CartItem | null = null;
     setItems((prev) =>
-      prev.map((item) =>
-        item.id === itemId
-          ? {
-              ...item,
-              quantity,
-              totalPrice: item.unitPrice * quantity,
-            }
-          : item
-      )
+      prev.map((item) => {
+        if (item.id === itemId) {
+          updatedItem = {
+            ...item,
+            quantity,
+            totalPrice: item.unitPrice * quantity,
+          };
+          return updatedItem;
+        }
+        return item;
+      })
     );
+
+    if (updatedItem) {
+      const sid = sessionId || getOrCreateCartSessionId();
+      fetch("/api/cart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: sid, item: updatedItem }),
+      }).catch((err) => console.error("Erro ao atualizar quantidade no banco:", err));
+    }
   };
 
   const clearCart = () => {
     setItems([]);
+
+    const sid = sessionId || getOrCreateCartSessionId();
+    fetch(`/api/cart?sessionId=${sid}&clear=true`, {
+      method: "DELETE",
+    }).catch((err) => console.error("Erro ao limpar carrinho no banco:", err));
   };
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
-  // Frete grátis para compras acima de R$ 149,00
   const shippingCost = subtotal > 149 || subtotal === 0 ? 0 : 14.90;
   const total = subtotal + shippingCost;
 
@@ -108,6 +173,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         subtotal,
         shippingCost,
         total,
+        sessionId,
       }}
     >
       {children}

@@ -156,3 +156,123 @@ export function compressAndResizeImage(
   });
 }
 
+/**
+ * Sanitiza strings para prevenir ataques de Cross-Site Scripting (XSS)
+ * Remove tags HTML, scripts inline e comandos perigosos mantendo a digitação de espaços e acentos fluida.
+ */
+export function sanitizeInput(input: string): string {
+  if (!input || typeof input !== "string") return "";
+  return input
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    .replace(/on\w+\s*=\s*"[^"]*"/gi, "")
+    .replace(/on\w+\s*=\s*'[^']*'/gi, "")
+    .replace(/javascript:/gi, "")
+    .replace(/[<>]/g, "");
+}
+
+/**
+ * Remove qualquer formatação HTML para exibição segura sem alterar o texto original
+ */
+export function escapeHTML(str: string): string {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// ============================================================================
+// MÁSCARAS DE FORMATAÇÃO DE CAMPOS
+// ============================================================================
+
+/** Máscara de CPF: 000.000.000-00 */
+export function formatCPFMask(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+  if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
+/** Máscara de Telefone / WhatsApp: (00) 90000-0000 */
+export function formatPhoneMask(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length === 0) return "";
+  if (digits.length <= 2) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+/** Máscara de CEP: 00000-000 */
+export function formatCEPMask(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 5) return digits;
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+}
+
+/** Máscara de Cartão de Crédito: 0000 0000 0000 0000 */
+export function formatCardMask(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 16);
+  return digits.replace(/(\d{4})(?=\d)/g, "$1 ");
+}
+
+/** Máscara de Validade de Cartão: MM/AA */
+export function formatExpiryMask(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+}
+
+// ============================================================================
+// VALIDAÇÕES REAIS DE DADOS (CPF, WHATSAPP, E-MAIL)
+// ============================================================================
+
+/**
+ * Validação real de CPF (Algoritmo de dígitos verificadores oficiais da Receita Federal)
+ */
+export function isValidCPF(cpf: string): boolean {
+  const clean = cpf.replace(/\D/g, "");
+  if (clean.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(clean)) return false;
+
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(clean.charAt(i), 10) * (10 - i);
+  }
+  let rev = 11 - (sum % 11);
+  if (rev === 10 || rev === 11) rev = 0;
+  if (rev !== parseInt(clean.charAt(9), 10)) return false;
+
+  sum = 0;
+  for (let i = 0; i < 10; i++) {
+    sum += parseInt(clean.charAt(i), 10) * (11 - i);
+  }
+  rev = 11 - (sum % 11);
+  if (rev === 10 || rev === 11) rev = 0;
+  if (rev !== parseInt(clean.charAt(10), 10)) return false;
+
+  return true;
+}
+
+/**
+ * Validação de WhatsApp / Telefone do Brasil (DDD válido + 10 ou 11 dígitos)
+ */
+export function isValidWhatsApp(phone: string): boolean {
+  const clean = phone.replace(/\D/g, "");
+  if (clean.length < 10 || clean.length > 11) return false;
+  const ddd = parseInt(clean.substring(0, 2), 10);
+  if (ddd < 11 || ddd > 99) return false;
+  if (clean.length === 11 && clean.charAt(2) !== "9") return false;
+  return true;
+}
+
+/**
+ * Validação de Formato de E-mail
+ */
+export function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
+
+

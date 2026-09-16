@@ -1,12 +1,14 @@
 "use client";
 
-import React from "react";
-import { Shield, Truck, Printer, Lock, Store } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import React, { useState } from "react";
+import { Shield, Truck, Printer, Lock, ChevronDown } from "lucide-react";
 import Logo from "@/components/common/Logo";
+import TrackOrderModal from "@/components/layout/TrackOrderModal";
 
 export default function Footer() {
-  const { handleUserIconClick, isAdmin } = useAuth();
+  const [openModels, setOpenModels] = useState(false);
+  const [openFinishes, setOpenFinishes] = useState(false);
+  const [openTrackModal, setOpenTrackModal] = useState(false);
 
   return (
     <footer className="bg-white border-t border-zinc-200 text-zinc-600 text-xs">
@@ -71,24 +73,27 @@ export default function Footer() {
           <p className="text-zinc-600 text-xs leading-relaxed pt-1">
             Seu estúdio especializado em capas de celular personalizadas com impressão fine-art sob medida.
           </p>
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={handleUserIconClick}
-              className="inline-flex items-center gap-1.5 text-xs text-zinc-800 hover:text-zinc-950 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 px-3 py-1.5 rounded-lg transition-colors font-semibold"
-            >
-              <Store className="w-3.5 h-3.5" />
-              {isAdmin ? "Painel do Lojista (Ativo)" : "Área do Lojista"}
-            </button>
-          </div>
         </div>
 
-        {/* Coluna 2: Modelos Populares */}
-        <div>
-          <h5 className="font-bold text-zinc-950 text-xs uppercase tracking-wider mb-3 font-display">
-            Modelos Populares
-          </h5>
-          <ul className="space-y-2 text-xs">
+        {/* Coluna 2: Modelos Populares (Dropdown Sanfona no Mobile) */}
+        <div className="border-b md:border-b-0 border-zinc-100 pb-4 md:pb-0">
+          <button
+            type="button"
+            onClick={() => setOpenModels(!openModels)}
+            className="w-full flex items-center justify-between md:cursor-default font-bold text-zinc-950 text-xs uppercase tracking-wider mb-2 md:mb-3 font-display text-left"
+          >
+            <span>Modelos Populares</span>
+            <ChevronDown
+              className={`w-4 h-4 text-zinc-500 transition-transform duration-200 md:hidden ${
+                openModels ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+          <ul
+            className={`space-y-2 text-xs transition-all duration-200 ${
+              openModels ? "block mt-2" : "hidden md:block"
+            }`}
+          >
             <li><span className="text-zinc-600 hover:text-zinc-950 cursor-pointer transition-colors">Capas iPhone 16 Pro Max</span></li>
             <li><span className="text-zinc-600 hover:text-zinc-950 cursor-pointer transition-colors">Capas iPhone 15 e 15 Pro</span></li>
             <li><span className="text-zinc-600 hover:text-zinc-950 cursor-pointer transition-colors">Capas Samsung Galaxy S24 Ultra</span></li>
@@ -97,12 +102,25 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* Coluna 3: Acabamentos */}
-        <div>
-          <h5 className="font-bold text-zinc-950 text-xs uppercase tracking-wider mb-3 font-display">
-            Nossos Acabamentos
-          </h5>
-          <ul className="space-y-2 text-xs">
+        {/* Coluna 3: Acabamentos (Dropdown Sanfona no Mobile) */}
+        <div className="border-b md:border-b-0 border-zinc-100 pb-4 md:pb-0">
+          <button
+            type="button"
+            onClick={() => setOpenFinishes(!openFinishes)}
+            className="w-full flex items-center justify-between md:cursor-default font-bold text-zinc-950 text-xs uppercase tracking-wider mb-2 md:mb-3 font-display text-left"
+          >
+            <span>Nossos Acabamentos</span>
+            <ChevronDown
+              className={`w-4 h-4 text-zinc-500 transition-transform duration-200 md:hidden ${
+                openFinishes ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+          <ul
+            className={`space-y-2 text-xs transition-all duration-200 ${
+              openFinishes ? "block mt-2" : "hidden md:block"
+            }`}
+          >
             <li><span className="text-zinc-600 hover:text-zinc-950 cursor-pointer transition-colors">Silicone Anti-Impacto com Airbags</span></li>
             <li><span className="text-zinc-600 hover:text-zinc-950 cursor-pointer transition-colors">Aveludada Soft Touch Fosca</span></li>
             <li><span className="text-zinc-600 hover:text-zinc-950 cursor-pointer transition-colors">Transparente Crystal TPU</span></li>
@@ -119,15 +137,25 @@ export default function Footer() {
             Segunda a Sexta, das 09h às 18h.<br />
             Suporte via WhatsApp para dúvidas e arte.
           </p>
-          <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-lg">
-            <span>🟢 Atendimento Online</span>
-          </div>
+          
+          <button
+            type="button"
+            onClick={() => setOpenTrackModal(true)}
+            className="inline-flex items-center gap-2 px-3.5 py-2 bg-zinc-950 hover:bg-zinc-800 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+          >
+            <span>Rastrear meu Pedido</span>
+          </button>
         </div>
       </div>
 
       <div className="border-t border-zinc-200 py-6 text-center text-[11px] text-zinc-500">
-        © {new Date().getFullYear()} SnapCase Fine Art Studio. Todos os direitos reservados.
+        © {new Date().getFullYear()} SnapCase Studio. Todos os direitos reservados.
       </div>
+
+      <TrackOrderModal
+        isOpen={openTrackModal}
+        onClose={() => setOpenTrackModal(false)}
+      />
     </footer>
   );
 }

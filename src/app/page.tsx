@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PhoneMockupCanvas from "@/components/customizer/PhoneMockupCanvas";
 import CustomizerControls from "@/components/customizer/CustomizerControls";
 import ModelSelector from "@/components/customizer/ModelSelector";
 import SpecsSummary from "@/components/customizer/SpecsSummary";
 import { PhoneModel, CaseFinish, CustomizationConfig } from "@/types";
 import { INITIAL_PHONE_MODELS, CASE_FINISHES } from "@/data/catalog";
+import { fetchPhoneModelsApi } from "@/lib/storage";
 import { useCart } from "@/context/CartContext";
 import {
   ShieldCheck,
@@ -22,10 +23,20 @@ import HeroBanner from "@/components/layout/HeroBanner";
 export default function Home() {
   const { addItem } = useCart();
 
-  // Modelos disponíveis (carregados do catálogo inicial)
-  const [models] = useState<PhoneModel[]>(INITIAL_PHONE_MODELS);
+  // Modelos disponíveis (carregados dinamicamente do Supabase/localStorage)
+  const [models, setModels] = useState<PhoneModel[]>(INITIAL_PHONE_MODELS);
   const [selectedModel, setSelectedModel] = useState<PhoneModel>(INITIAL_PHONE_MODELS[0]);
   const [selectedFinish, setSelectedFinish] = useState<CaseFinish>(CASE_FINISHES[0]);
+
+  useEffect(() => {
+    async function loadModels() {
+      const fetched = await fetchPhoneModelsApi();
+      if (fetched && fetched.length > 0) {
+        setModels(fetched);
+      }
+    }
+    loadModels();
+  }, []);
 
   // Configuração da personalização
   const [customization, setCustomization] = useState<CustomizationConfig>({
@@ -78,9 +89,18 @@ export default function Home() {
     let highResPrint = "";
 
     if (exportFn) {
-      const exported = exportFn();
-      previewMockup = exported.mockupUrl;
-      highResPrint = exported.highResUrl;
+      try {
+        if (typeof exportFn === "function") {
+          const exported = exportFn();
+          previewMockup = exported.mockupUrl;
+          highResPrint = exported.highResUrl;
+        } else if (typeof exportFn === "object" && exportFn !== null) {
+          previewMockup = (exportFn as any).mockupUrl || "";
+          highResPrint = (exportFn as any).highResUrl || "";
+        }
+      } catch (e) {
+        console.warn("Erro ao gerar preview exportado:", e);
+      }
     }
 
     const unitPrice = selectedModel.basePrice;
@@ -123,7 +143,7 @@ export default function Home() {
               finish={selectedFinish}
               customization={customization}
               onCustomizationChange={handleCustomizationChange}
-              onExportReady={setExportFn}
+              onExportReady={(fn) => setExportFn(() => fn)}
             />
           </div>
 
@@ -163,7 +183,7 @@ export default function Home() {
             Como Funciona Seu Pedido
           </h2>
           <p className="text-xs sm:text-sm text-zinc-600 mt-2">
-            Em menos de 2 minutos sua capinha personalizada é configurada e entra na nossa esteira de impressão.
+            Em menos de 3 minutos sua capinha personalizada é configurada e entra na nossa esteira de impressão.
           </p>
         </div>
 

@@ -115,11 +115,11 @@ export default function ModelSelector({
               {formatCurrency(selectedModel.basePrice)}
             </span>
             <div
-              className={`w-7 h-7 rounded-lg bg-zinc-200/80 flex items-center justify-center text-zinc-700 transition-transform duration-200 ${
-                isOpen ? "rotate-180 bg-zinc-950 text-white" : ""
+              className={`w-8 h-8 rounded-xl bg-zinc-950 text-white flex items-center justify-center shadow-md transition-all duration-200 ${
+                isOpen ? "rotate-180 bg-black ring-2 ring-zinc-950/20" : "hover:bg-zinc-800"
               }`}
             >
-              <ChevronDown className="w-4 h-4" />
+              <ChevronDown className="w-4.5 h-4.5 stroke-[2.5] text-white" />
             </div>
           </div>
         </button>

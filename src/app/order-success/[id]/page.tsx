@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { getSavedOrders } from "@/lib/storage";
+import { fetchOrderById } from "@/lib/storage";
 import { Order } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import {
@@ -12,7 +12,6 @@ import {
   Check,
   QrCode,
   Truck,
-  ArrowRight,
   Printer,
   Package,
 } from "lucide-react";
@@ -25,13 +24,15 @@ export default function OrderSuccessPage() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (orderId) {
-      const orders = getSavedOrders();
-      const found = orders.find((o) => o.id === orderId);
-      if (found) {
-        setOrder(found);
+    async function loadOrder() {
+      if (orderId) {
+        const found = await fetchOrderById(orderId);
+        if (found) {
+          setOrder(found);
+        }
       }
     }
+    loadOrder();
   }, [orderId]);
 
   const pixKey = "00020126580014br.gov.bcb.pix0136snapcase-pix-key@pix.com.br5204000053039865802BR5925SNAPCASE STUDIO6009SAO PAULO62070503***6304E72B";
@@ -214,19 +215,12 @@ export default function OrderSuccessPage() {
       </div>
 
       {/* Botões de Ação */}
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
+      <div className="flex items-center justify-center pt-4">
         <Link
           href="/"
-          className="w-full sm:w-auto px-6 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 border border-zinc-200 rounded-xl font-bold text-xs transition-colors text-center shadow-sm"
+          className="w-full sm:w-auto px-8 py-3.5 bg-zinc-950 hover:bg-zinc-800 text-white rounded-xl font-bold text-xs transition-all text-center shadow-lg shadow-zinc-950/10"
         >
           Voltar para a Loja
-        </Link>
-        <Link
-          href="/admin"
-          className="w-full sm:w-auto px-6 py-3 bg-zinc-950 hover:bg-zinc-800 text-white rounded-xl font-bold text-xs transition-colors flex items-center justify-center gap-2 shadow-lg shadow-zinc-950/20"
-        >
-          <span>Ver no Painel do Lojista</span>
-          <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
     </div>

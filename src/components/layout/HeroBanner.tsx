@@ -188,7 +188,7 @@ export default function HeroBanner({
 
             {/* Descrição */}
             <p className="text-sm sm:text-base text-zinc-600 leading-relaxed max-w-xl font-normal">
-              Crie em menos de 2 minutos uma capinha exclusiva para seu Smartphone. Com prévia em tempo real antes de finalizar seu pedido.
+              Crie em 3 minutos uma capinha exclusiva para seu Smartphone. Com prévia em tempo real antes de finalizar seu pedido.
             </p>
 
             {/* Destaques / Benefícios Rápidos */}
