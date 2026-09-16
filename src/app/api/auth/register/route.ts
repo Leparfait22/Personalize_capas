@@ -9,9 +9,16 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { name, email, password, role } = body;
 
-    const userName = (name || "").trim();
-    const userEmail = (email || "").trim().toLowerCase();
-    const userPassword = (password || "").trim();
+    if (typeof name !== "string" || typeof email !== "string" || typeof password !== "string") {
+      return NextResponse.json(
+        { error: "Formato de dados inválido. Os campos devem ser textos válidos." },
+        { status: 400 }
+      );
+    }
+
+    const userName = name.trim();
+    const userEmail = email.trim().toLowerCase();
+    const userPassword = password.trim();
     // 🔒 Segurança: Registros públicos via API são estritamente do tipo 'customer'.
     // Administradores são gerenciados via env ou banco direto.
     const userRole = "customer";

@@ -1,17 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
-import { ShoppingBag, User, Truck, Search } from "lucide-react";
+import { ShoppingBag, User, Truck } from "lucide-react";
 import Logo from "@/components/common/Logo";
-import TrackOrderModal from "@/components/layout/TrackOrderModal";
 
 export default function Header() {
   const { totalItems, setIsCartOpen } = useCart();
   const { isAdmin, handleUserIconClick } = useAuth();
-  const [isTrackModalOpen, setIsTrackModalOpen] = useState(false);
 
   return (
     <>
@@ -46,16 +44,6 @@ export default function Header() {
 
           {/* Ações da Direita */}
           <div className="flex items-center gap-2">
-            {/* Botão Rastrear Pedido (Disponível sem login) */}
-            <button
-              type="button"
-              onClick={() => setIsTrackModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 text-zinc-800 shadow-sm"
-              title="Rastrear ou consultar pedido"
-            >
-              <Search className="w-3.5 h-3.5 text-emerald-600" />
-              <span className="hidden sm:inline">Rastrear Pedido</span>
-            </button>
 
             {/* Botão de Usuário / Login (Condicional Admin) */}
             <button
@@ -98,12 +86,6 @@ export default function Header() {
           </div>
         </div>
       </header>
-
-      {/* Modal de Rastreamento Rápido de Pedido */}
-      <TrackOrderModal
-        isOpen={isTrackModalOpen}
-        onClose={() => setIsTrackModalOpen(false)}
-      />
     </>
   );
 }

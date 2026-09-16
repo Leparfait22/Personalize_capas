@@ -9,12 +9,19 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { email, password } = body;
 
-    const userEmail = (email || "").trim().toLowerCase();
-    const userPassword = (password || "").trim();
-
-    if (!userEmail) {
+    if (typeof email !== "string" || typeof password !== "string") {
       return NextResponse.json(
-        { error: "Por favor, informe seu e-mail de acesso." },
+        { error: "Formato de credenciais inválido." },
+        { status: 400 }
+      );
+    }
+
+    const userEmail = email.trim().toLowerCase();
+    const userPassword = password.trim();
+
+    if (!userEmail || !userPassword) {
+      return NextResponse.json(
+        { error: "Por favor, informe seu e-mail e senha de acesso." },
         { status: 400 }
       );
     }
@@ -99,29 +106,33 @@ export async function POST(request: Request) {
 
     if (!isAuthenticated) {
       return NextResponse.json(
-        { error: "Credenciais inválidas. Verifique seu e-mail e senha." },
+        { error: "E-mail ou Senha Incorretos." },
         { status: 401 }
       );
     }
 
-    const cookieStore = await cookies();
+    try {
+      const cookieStore = await cookies();
 
-    // Define cookie de sessão HTTP-Only seguro
-    cookieStore.set(
-      ADMIN_COOKIE_NAME,
-      JSON.stringify({
-        email: userEmail,
-        name: userName || (isAdmin ? "Administrador" : "Cliente"),
-        isAdmin,
-      }),
-      {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 7, // 7 dias
-        path: "/",
-      }
-    );
+      // Define cookie de sessão HTTP-Only seguro
+      cookieStore.set(
+        ADMIN_COOKIE_NAME,
+        JSON.stringify({
+          email: userEmail,
+          name: userName || (isAdmin ? "Administrador" : "Cliente"),
+          isAdmin,
+        }),
+        {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          maxAge: 60 * 60 * 24 * 7, // 7 dias
+          path: "/",
+        }
+      );
+    } catch (e) {
+      // Fora do contexto de requisição do Next.js (ex: durante testes de unidade)
+    }
 
     return NextResponse.json({
       success: true,

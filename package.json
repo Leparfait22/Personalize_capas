@@ -7,8 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "npx tsx tests/security-audit.test.ts",
-    "test:security": "npx tsx tests/security-audit.test.ts"
+    "test": "npx tsx tests/security-audit.test.ts && npx tsx tests/auth-attacks.test.ts",
+    "test:security": "npx tsx tests/security-audit.test.ts",
+    "test:auth": "npx tsx tests/auth-attacks.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1123.0",

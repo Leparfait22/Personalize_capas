@@ -148,7 +148,7 @@ export default function HeroBanner({
           ))}
           <span className="font-bold text-zinc-900 ml-1">4.9/5</span>
         </div>
-        <span className="text-[11px] text-zinc-500">+12.000 capinhas personalizadas entregues</span>
+        <span className="text-[11px] text-zinc-500">+500 capinhas personalizadas entregues</span>
       </div>
     </div>
   );
@@ -203,7 +203,7 @@ export default function HeroBanner({
                 <div className="w-5 h-5 rounded-full bg-zinc-950 text-white flex items-center justify-center shrink-0">
                   <Check className="w-3 h-3 stroke-[3]" />
                 </div>
-                <span>90 dias garantia</span>
+                <span>Garantia de Qualidade</span>
               </div>
               <div className="flex items-center gap-2 text-xs text-zinc-700 font-semibold bg-zinc-50 border border-zinc-200/80 p-2.5 rounded-xl col-span-2 sm:col-span-1">
                 <div className="w-5 h-5 rounded-full bg-zinc-950 text-white flex items-center justify-center shrink-0">

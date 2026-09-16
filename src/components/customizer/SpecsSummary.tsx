@@ -93,7 +93,7 @@ export default function SpecsSummary({
           </span>
           <span className="font-bold text-zinc-900 flex items-center gap-1">
             <Shield className="w-3.5 h-3.5 text-emerald-600" />
-            90 Dias contra descasques
+            Garantia contra descasques
           </span>
         </div>
       </div>

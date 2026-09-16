@@ -255,7 +255,7 @@ export default function Home() {
                 <p className="text-[11px] text-zinc-400 mt-0.5">Fidelidade UV</p>
               </div>
               <div>
-                <span className="text-2xl font-black text-white font-display">90 Dias</span>
+                <span className="text-2xl font-black text-white font-display">100%</span>
                 <p className="text-[11px] text-zinc-400 mt-0.5">Garantia Total</p>
               </div>
             </div>
@@ -278,15 +278,11 @@ export default function Home() {
           {[
             {
               q: "A foto na capinha desbota ou descasca com o tempo?",
-              a: "Não! A nossa impressão é realizada com tecnologia UV direta com secagem instantânea por luz ultravioleta, penetrando microscopicamente no substrato da capa. Oferecemos 90 dias de garantia contra qualquer defeito.",
+              a: "Não! A nossa impressão é realizada com tecnologia UV direta com secagem instantânea por luz ultravioleta, penetrando microscopicamente no substrato da capa. Oferecemos garantia total contra qualquer defeito de fabricação ou descasque.",
             },
             {
               q: "Como sei se a minha foto vai ficar com boa qualidade?",
               a: "Nosso customizador conta com um indicador inteligente de resolução em tempo real. Se sua foto for muito pequena ou tiver baixa definição, o sistema alertará na tela com orientações.",
-            },
-            {
-              q: "A capinha é compatível com carregamento por indução (Wireless / MagSafe)?",
-              a: "Sim! Todas as nossas capas possuem espessura milimétrica calibrada para permitir o carregamento sem fio por indução sem necessidade de remover o smartphone.",
             },
             {
               q: "Qual é o prazo de confecção e entrega?",

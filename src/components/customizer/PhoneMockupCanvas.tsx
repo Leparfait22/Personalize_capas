@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { PhoneModel, CaseFinish, CustomizationConfig } from "@/types";
 import { evaluateImageQuality } from "@/lib/utils";
+import { Move, Check } from "lucide-react";
 
 interface PhoneMockupCanvasProps {
   model: PhoneModel;
@@ -23,9 +24,43 @@ export default function PhoneMockupCanvas({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const imageElementRef = useRef<HTMLImageElement | null>(null);
 
+  const [isFocused, setIsFocused] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [imageLoaded, setImageLoaded] = useState(false);
+
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const isTouchMovingCanvas = useRef(false);
+
+  // Desativar foco ao clicar/tocar fora do mockup ou pressionar Escape
+  useEffect(() => {
+    function handleGlobalPointerDown(e: MouseEvent | TouchEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setIsFocused(false);
+        setIsDragging(false);
+      }
+    }
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setIsFocused(false);
+        setIsDragging(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleGlobalPointerDown);
+    document.addEventListener("touchstart", handleGlobalPointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handleGlobalPointerDown);
+      document.removeEventListener("touchstart", handleGlobalPointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   // Carregar imagem quando URL mudar
   useEffect(() => {
@@ -477,15 +512,18 @@ export default function PhoneMockupCanvas({
     }
   }, [onExportReady, getExportPreviews]);
 
-  // Gestos de Mouse / Touch para Arrastar e Posicionar
+  // Gestos de Mouse / Touch para Arrastar e Posicionar com Modo de Foco
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!customization.imageUrl) return;
+    if (!isFocused) {
+      setIsFocused(true);
+    }
     setIsDragging(true);
     setDragStart({ x: e.clientX, y: e.clientY });
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDragging || !canvasRef.current) return;
+    if (!isDragging || !isFocused || !canvasRef.current) return;
     const dx = e.clientX - dragStart.x;
     const dy = e.clientY - dragStart.y;
 
@@ -506,17 +544,39 @@ export default function PhoneMockupCanvas({
     setIsDragging(false);
   };
 
-  // Touch handlers para Mobile
+  // Touch handlers para Mobile com isolamento de scroll
   const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
     if (!customization.imageUrl || e.touches.length === 0) return;
-    setIsDragging(true);
-    setDragStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+    isTouchMovingCanvas.current = false;
+
+    if (isFocused) {
+      setIsDragging(true);
+      setDragStart({ x: touch.clientX, y: touch.clientY });
+    }
   };
 
   const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDragging || !canvasRef.current || e.touches.length === 0) return;
-    const dx = e.touches[0].clientX - dragStart.x;
-    const dy = e.touches[0].clientY - dragStart.y;
+    if (e.touches.length === 0) return;
+
+    if (!isFocused) {
+      // Quando não está em foco: apenas detecta se é scroll da página e NÃO mexe na capa
+      if (touchStartRef.current) {
+        const dx = Math.abs(e.touches[0].clientX - touchStartRef.current.x);
+        const dy = Math.abs(e.touches[0].clientY - touchStartRef.current.y);
+        if (dx > 8 || dy > 8) {
+          isTouchMovingCanvas.current = true;
+        }
+      }
+      return;
+    }
+
+    // Quando está em foco: ajusta a posição da imagem
+    if (!isDragging || !canvasRef.current) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - dragStart.x;
+    const dy = touch.clientY - dragStart.y;
 
     const deltaPercentX = (dx / canvasRef.current.clientWidth) * 100;
     const deltaPercentY = (dy / canvasRef.current.clientHeight) * 100;
@@ -528,17 +588,32 @@ export default function PhoneMockupCanvas({
       },
     });
 
-    setDragStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+    setDragStart({ x: touch.clientX, y: touch.clientY });
   };
 
   const handleTouchEnd = () => {
+    if (!isFocused) {
+      // Se foi um toque rápido sem arrasto de scroll, ativa o foco
+      if (touchStartRef.current && !isTouchMovingCanvas.current) {
+        const elapsed = Date.now() - touchStartRef.current.time;
+        if (elapsed < 400) {
+          setIsFocused(true);
+        }
+      }
+    }
     setIsDragging(false);
+    touchStartRef.current = null;
+    isTouchMovingCanvas.current = false;
   };
 
   return (
     <div
       ref={containerRef}
-      className="relative flex flex-col items-center justify-center p-4 sm:p-8 bg-white rounded-3xl border border-zinc-200/90 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-xl"
+      className={`relative flex flex-col items-center justify-center p-4 sm:p-8 bg-white rounded-3xl border transition-all duration-300 ${
+        isFocused
+          ? "border-zinc-950 shadow-[0_12px_40px_rgba(0,0,0,0.12)]"
+          : "border-zinc-200/90 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+      } backdrop-blur-xl`}
     >
       {/* Badge do Modelo Ativo */}
       <div className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-zinc-900 text-white text-xs font-semibold px-3.5 py-1.5 rounded-full border border-zinc-800 shadow-md">
@@ -546,8 +621,14 @@ export default function PhoneMockupCanvas({
         {model.name}
       </div>
 
-      {/* Canvas */}
-      <div className="relative group cursor-grab active:cursor-grabbing max-w-[280px] sm:max-w-[320px] w-full transition-transform duration-300">
+      {/* Canvas com indicação de foco */}
+      <div
+        className={`relative max-w-[280px] sm:max-w-[320px] w-full transition-all duration-300 ${
+          isFocused
+            ? "ring-4 ring-zinc-950/80 ring-offset-4 ring-offset-white rounded-2xl shadow-xl scale-[1.01]"
+            : "hover:scale-[1.01]"
+        }`}
+      >
         <canvas
           ref={canvasRef}
           onMouseDown={handleMouseDown}
@@ -557,16 +638,49 @@ export default function PhoneMockupCanvas({
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-          className="w-full h-auto drop-shadow-xl rounded-2xl select-none"
+          style={{ touchAction: isFocused ? "none" : "pan-y" }}
+          className={`w-full h-auto drop-shadow-xl rounded-2xl select-none transition-all ${
+            isFocused
+              ? isDragging
+                ? "cursor-grabbing"
+                : "cursor-grab"
+              : "cursor-pointer"
+          }`}
         />
-
-        {/* Dica de interação ao passar o mouse */}
-        {customization.imageUrl && (
-          <div className="absolute -bottom-7 left-1/2 -translate-x-1/2 whitespace-nowrap text-[11px] text-white bg-zinc-950 px-3.5 py-1 rounded-full border border-zinc-800 shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-            👆 Clique e arraste para posicionar a foto
-          </div>
-        )}
       </div>
+
+      {/* Controles visuais de Foco */}
+      {customization.imageUrl && (
+        <div className="mt-4 flex flex-col items-center">
+          {!isFocused ? (
+            <button
+              type="button"
+              onClick={() => setIsFocused(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200/80 text-zinc-800 text-xs font-bold transition-all border border-zinc-200 shadow-sm active:scale-95 cursor-pointer"
+            >
+              <Move className="w-3.5 h-3.5 text-zinc-900" />
+              <span>Clique na capinha para ajustar foto</span>
+            </button>
+          ) : (
+            <div className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl bg-zinc-950 text-white text-xs font-bold shadow-lg animate-in fade-in duration-200">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[11px] sm:text-xs">Foco ativo · Arraste para posicionar</span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsFocused(false);
+                  setIsDragging(false);
+                }}
+                className="ml-1 px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-white text-[11px] font-bold rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                <Check className="w-3 h-3 text-emerald-400 stroke-[3]" />
+                <span>Concluir</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

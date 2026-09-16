@@ -32,7 +32,7 @@ export default function Footer() {
               <Shield className="w-5 h-5 text-emerald-400" />
             </div>
             <div>
-              <h4 className="font-bold text-zinc-950 text-sm font-display">Garantia de 90 Dias</h4>
+              <h4 className="font-bold text-zinc-950 text-sm font-display">Garantia de Qualidade</h4>
               <p className="text-zinc-600 text-xs mt-1 leading-relaxed">
                 Garantia total contra descasques, desbotamento ou defeitos de fabricação na capinha.
               </p>
