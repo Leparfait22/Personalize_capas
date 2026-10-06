@@ -112,6 +112,29 @@ export interface OrderShippingAddress {
   state: string;
 }
 
+export interface ShippingOption {
+  id: number | string;
+  name: string; // Ex: "PAC", "SEDEX", ".Package", "Mini Envios"
+  company: {
+    id?: number;
+    name: string; // Ex: "Correios", "Jadlog"
+    picture?: string;
+  };
+  price: number;
+  finalPrice: number;
+  deliveryTime: number; // Prazo em dias úteis
+  deliveryRange?: { min: number; max: number };
+  error?: string;
+}
+
+export interface OrderShippingMethod {
+  id: number | string;
+  name: string;
+  company: string;
+  price: number;
+  deliveryTime: number;
+}
+
 export type OrderStatus = "pending" | "in_production" | "printed" | "shipped" | "completed";
 
 export interface Order {
@@ -122,6 +145,8 @@ export interface Order {
   items: CartItem[];
   subtotal: number;
   shippingCost: number;
+  shippingMethod?: OrderShippingMethod;
+  trackingCode?: string;
   discount: number;
   totalAmount: number;
   paymentMethod: "pix" | "credit_card";
@@ -131,3 +156,4 @@ export interface Order {
   updatedAt: string;
   notes?: string;
 }
+

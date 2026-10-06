@@ -26,6 +26,7 @@ yarn-error.log*
 # environment variables (ignore all .env files EXCEPT .env.example)
 .env
 .env*
+!.env.example
 
 # vercel
 .vercel

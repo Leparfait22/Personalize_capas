@@ -57,6 +57,8 @@ export async function GET(request: Request) {
             cpf: ord.customer_cpf,
           },
           shippingAddress: ord.shipping_address,
+          shippingMethod: ord.shipping_address?.shippingMethod || ord.shippingMethod,
+          trackingCode: ord.shipping_address?.trackingCode || ord.trackingCode,
           items: (ord.order_items || []).map((item: any) => ({
             id: item.id,
             model: {
@@ -256,7 +258,11 @@ export async function POST(request: Request) {
         customer_email: order.customer.email,
         customer_whatsapp: order.customer.whatsapp,
         customer_cpf: order.customer.cpf,
-        shipping_address: order.shippingAddress,
+        shipping_address: {
+          ...order.shippingAddress,
+          shippingMethod: order.shippingMethod || null,
+          trackingCode: order.trackingCode || null,
+        },
         subtotal: order.subtotal,
         shipping_cost: order.shippingCost,
         discount: order.discount,

@@ -952,6 +952,9 @@ export default function AdminDashboardPage() {
                       </p>
                       <p className="text-zinc-500 text-[11px]">
                         Itens: {formatCurrency(order.subtotal)} | Frete: {order.shippingCost === 0 ? "Grátis" : formatCurrency(order.shippingCost)}
+                        {order.shippingMethod && (
+                          <span className="text-zinc-700 font-medium"> ({order.shippingMethod.company} {order.shippingMethod.name} · {order.shippingMethod.deliveryTime}d)</span>
+                        )}
                       </p>
                     </div>
                   </div>
