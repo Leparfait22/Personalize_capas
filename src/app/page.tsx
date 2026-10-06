@@ -38,6 +38,17 @@ export default function Home() {
     loadModels();
   }, []);
 
+  // Intercepta retorno OAuth do Melhor Envio caso a URL de retorno tenha sido configurada na raiz
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
+      if (code) {
+        window.location.href = `/api/shipping/callback?code=${encodeURIComponent(code)}`;
+      }
+    }
+  }, []);
+
   // Configuração da personalização
   const [customization, setCustomization] = useState<CustomizationConfig>({
     modelId: INITIAL_PHONE_MODELS[0].id,
