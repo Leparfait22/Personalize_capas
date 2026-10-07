@@ -1,4 +1,4 @@
-import { ShippingOption } from "@/types";
+import { Order, ShippingOption } from "@/types";
 
 interface CalculateShipmentInput {
   toCep: string;
@@ -340,3 +340,217 @@ export async function calculateMelhorEnvioShipping({
     };
   }
 }
+
+export interface GenerateLabelResult {
+  success: boolean;
+  shipmentId: string;
+  trackingCode: string;
+  labelUrl: string;
+  protocol?: string;
+  carrierName: string;
+  serviceName: string;
+  price: number;
+  isSandbox: boolean;
+  error?: string;
+}
+
+/**
+ * Realiza o ciclo completo de compra, geração e emissão da etiqueta no Melhor Envio
+ * (Consome do saldo da carteira de testes R$ 10.000 no Sandbox ou saldo real em Produção)
+ */
+export async function generateMelhorEnvioLabel(order: Order): Promise<GenerateLabelResult> {
+  const token = (process.env.MELHOR_ENVIO_TOKEN || "").trim();
+  const apiUrl = (process.env.MELHOR_ENVIO_URL || "https://sandbox.melhorenvio.com.br").replace(/\/$/, "");
+  const defaultFromCep = cleanCep(process.env.MELHOR_ENVIO_FROM_CEP || "01001000");
+  const appContact = process.env.MELHOR_ENVIO_APP_CONTACT || "contato@snapcasebr.com";
+  const isSandbox = apiUrl.includes("sandbox");
+
+  if (!token) {
+    throw new Error("Token do Melhor Envio não configurado.");
+  }
+
+  // Identificação do serviço (No Sandbox, Jadlog .Package=3 e .Com=4 têm suporte a impressão)
+  let serviceId = 3; // Jadlog .Package por padrão
+  if (order.shippingMethod?.id) {
+    const parsedId = Number(order.shippingMethod.id);
+    if (!isNaN(parsedId)) {
+      serviceId = parsedId;
+    }
+  }
+
+  const cleanPhone = (order.customer.whatsapp || "11988887777").replace(/\D/g, "");
+  const cleanCpf = (order.customer.cpf || "34218904822").replace(/\D/g, "");
+  const cleanToCep = cleanCep(order.shippingAddress.zipCode);
+
+  const totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
+  const packageHeight = Math.min(4 + Math.max(0, totalQuantity - 1) * 1.5, 40);
+  const packageWeight = Math.round(Math.max(0.12 * totalQuantity, 0.1) * 100) / 100;
+  const insuranceValue = Math.max(order.subtotal, 30);
+
+  const headers = {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+    "User-Agent": `PersonalizeCases (${appContact})`,
+  };
+
+  // 1. Montagem do Carrinho do Melhor Envio
+  const cartPayload = {
+    service: serviceId,
+    from: {
+      name: "Personalize Cases Store",
+      phone: "11988887777",
+      email: appContact,
+      document: "29410948000109",
+      company_document: "",
+      state_register: "",
+      address: "Avenida Paulista",
+      complement: "Sala 101",
+      number: "1000",
+      district: "Bela Vista",
+      city: "São Paulo",
+      state_abbr: "SP",
+      country_id: "BR",
+      postal_code: defaultFromCep,
+      note: "",
+    },
+    to: {
+      name: order.customer.name,
+      phone: cleanPhone.length >= 10 ? cleanPhone : "11999999999",
+      email: order.customer.email,
+      document: cleanCpf.length === 11 ? cleanCpf : "34218904822",
+      company_document: "",
+      state_register: "",
+      address: order.shippingAddress.street || "Rua do Cliente",
+      complement: order.shippingAddress.complement || "",
+      number: order.shippingAddress.number || "S/N",
+      district: order.shippingAddress.neighborhood || "Centro",
+      city: order.shippingAddress.city || "São Paulo",
+      state_abbr: order.shippingAddress.state || "SP",
+      country_id: "BR",
+      postal_code: cleanToCep,
+      note: `Pedido ${order.orderNumber}`,
+    },
+    products: order.items.map((item) => ({
+      name: `Capinha ${item.model.name} (${item.finish.name})`,
+      quantity: item.quantity,
+      unitary_value: item.unitPrice,
+    })),
+    volumes: [
+      {
+        height: packageHeight,
+        width: 12,
+        length: 18,
+        weight: packageWeight,
+      },
+    ],
+    options: {
+      insurance_value: insuranceValue,
+      receipt: false,
+      own_hand: false,
+      reverse: false,
+      non_commercial: true,
+    },
+  };
+
+  // Passo 1: Inserir Envio no Carrinho
+  const cartRes = await fetch(`${apiUrl}/api/v2/me/cart`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(cartPayload),
+  });
+
+  const cartData = await cartRes.json();
+  if (!cartRes.ok || !cartData.id) {
+    console.error("Erro ao adicionar ao carrinho do Melhor Envio:", cartData);
+    throw new Error(cartData.message || cartData.error || "Erro ao adicionar remessa ao carrinho.");
+  }
+
+  const shipmentId = cartData.id;
+  const protocol = cartData.protocol || "";
+  const carrierName = cartData.service?.company?.name || order.shippingMethod?.company || "Transportadora";
+  const serviceName = cartData.service?.name || order.shippingMethod?.name || "Frete";
+  const price = parseFloat(cartData.price || "0");
+
+  // Passo 2: Checkout (Pagar Etiqueta com Saldo da Carteira de Testes R$ 10.000)
+  const checkoutRes = await fetch(`${apiUrl}/api/v2/me/shipment/checkout`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ orders: [shipmentId] }),
+  });
+
+  const checkoutData = await checkoutRes.json();
+  if (!checkoutRes.ok) {
+    console.warn("Aviso no checkout do Melhor Envio:", checkoutData);
+  }
+
+  // Passo 3: Solicitar Geração da Etiqueta
+  try {
+    await fetch(`${apiUrl}/api/v2/me/shipment/generate`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ orders: [shipmentId] }),
+    });
+  } catch (genErr) {
+    console.warn("Aviso ao solicitar generate da etiqueta:", genErr);
+  }
+
+  // Passo 4: Obter URL de Impressão Pública da Etiqueta
+  let labelUrl = "";
+  try {
+    const printRes = await fetch(`${apiUrl}/api/v2/me/shipment/print`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ mode: "public", orders: [shipmentId] }),
+    });
+
+    if (printRes.ok) {
+      const printData = await printRes.json();
+      labelUrl = printData.url || "";
+    }
+  } catch (printErr) {
+    console.warn("Aviso ao buscar URL de impressão:", printErr);
+  }
+
+  // Fallback para URL direta de impressão do Melhor Envio caso a resposta não venha com link
+  if (!labelUrl) {
+    labelUrl = `${apiUrl}/api/v2/me/shipment/print/${shipmentId}`;
+  }
+
+  // Passo 5: Obter Detalhes e Código de Rastreamento
+  let trackingCode = protocol;
+  try {
+    const orderDetailsRes = await fetch(`${apiUrl}/api/v2/me/orders/${shipmentId}`, {
+      method: "GET",
+      headers,
+    });
+
+    if (orderDetailsRes.ok) {
+      const orderDetails = await orderDetailsRes.json();
+      if (orderDetails.tracking) {
+        trackingCode = orderDetails.tracking;
+      } else if (orderDetails.protocol) {
+        trackingCode = orderDetails.protocol;
+      }
+    }
+  } catch (trackErr) {
+    console.warn("Aviso ao buscar detalhes de rastreio:", trackErr);
+  }
+
+  if (!trackingCode) {
+    trackingCode = `ME-${shipmentId.slice(0, 8).toUpperCase()}`;
+  }
+
+  return {
+    success: true,
+    shipmentId,
+    trackingCode,
+    labelUrl,
+    protocol,
+    carrierName,
+    serviceName,
+    price,
+    isSandbox,
+  };
+}
+

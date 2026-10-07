@@ -39,6 +39,7 @@ import {
   Trash2,
   Pencil,
   Image as ImageIcon,
+  Tag,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -78,6 +79,50 @@ export default function AdminDashboardPage() {
     heightMm: 155.0,
     cameraShape: "rounded-square" as const,
   });
+
+  const [generatingLabelId, setGeneratingLabelId] = useState<string | null>(null);
+  const [copiedTracking, setCopiedTracking] = useState<string | null>(null);
+
+  const handleGenerateLabel = async (orderId: string) => {
+    setGeneratingLabelId(orderId);
+    try {
+      const res = await fetch(`/api/orders/${orderId}/label`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === orderId
+              ? {
+                  ...o,
+                  trackingCode: data.trackingCode,
+                  labelUrl: data.labelUrl,
+                  shipmentId: data.shipmentId,
+                  status: o.status === "pending" ? "in_production" : o.status,
+                }
+              : o
+          )
+        );
+        if (data.labelUrl) {
+          window.open(data.labelUrl, "_blank");
+        }
+      } else {
+        alert(data.error || "Erro ao emitir etiqueta no Melhor Envio.");
+      }
+    } catch (err) {
+      console.error("Erro ao emitir etiqueta:", err);
+      alert("Falha de conexão com a API do Melhor Envio.");
+    } finally {
+      setGeneratingLabelId(null);
+    }
+  };
+
+  const handleCopyTracking = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedTracking(code);
+    setTimeout(() => setCopiedTracking(null), 2500);
+  };
 
   const loadData = async () => {
     const fetchedOrders = await fetchSavedOrders();
@@ -956,6 +1001,88 @@ export default function AdminDashboardPage() {
                           <span className="text-zinc-700 font-medium"> ({order.shippingMethod.company} {order.shippingMethod.name} · {order.shippingMethod.deliveryTime}d)</span>
                         )}
                       </p>
+                    </div>
+                  </div>
+
+                  {/* Barra de Envio & Emissão de Etiqueta (Melhor Envio) */}
+                  <div className="p-3 bg-zinc-100/70 rounded-xl border border-zinc-200/80 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-white border border-zinc-200 flex items-center justify-center text-zinc-700 shadow-xs shrink-0">
+                        <Truck className="w-4 h-4 text-zinc-800" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-zinc-950 font-display">
+                            {order.shippingMethod
+                              ? `${order.shippingMethod.company} (${order.shippingMethod.name})`
+                              : "Frete Melhor Envio"}
+                          </span>
+                          {order.labelUrl ? (
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              Etiqueta Emitida
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-zinc-200 text-zinc-700">
+                              Etiqueta Não Emitida
+                            </span>
+                          )}
+                        </div>
+
+                        {order.trackingCode && (
+                          <div className="flex items-center gap-2 pt-0.5">
+                            <span className="text-[11px] text-zinc-500">Rastreio:</span>
+                            <span className="text-[11px] font-mono font-bold text-zinc-950 bg-white px-1.5 py-0.5 rounded border border-zinc-200">
+                              {order.trackingCode}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyTracking(order.trackingCode!)}
+                              className="text-[11px] text-zinc-500 hover:text-zinc-950 flex items-center gap-1 transition-colors cursor-pointer"
+                              title="Copiar código de rastreamento"
+                            >
+                              {copiedTracking === order.trackingCode ? (
+                                <Check className="w-3 h-3 text-emerald-600" />
+                              ) : (
+                                <Copy className="w-3 h-3" />
+                              )}
+                              <span>{copiedTracking === order.trackingCode ? "Copiado!" : "Copiar"}</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {order.labelUrl ? (
+                        <a
+                          href={order.labelUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors shadow-xs"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          <span>Imprimir Etiqueta (PDF)</span>
+                        </a>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={generatingLabelId === order.id}
+                          onClick={() => handleGenerateLabel(order.id)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-zinc-950 hover:bg-zinc-800 disabled:opacity-60 text-white rounded-lg text-xs font-bold transition-colors shadow-xs cursor-pointer"
+                        >
+                          {generatingLabelId === order.id ? (
+                            <>
+                              <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              <span>Emitindo Etiqueta...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Tag className="w-3.5 h-3.5 text-zinc-300" />
+                              <span>Gerar Etiqueta (Melhor Envio)</span>
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
 

@@ -27,6 +27,10 @@ export async function GET(
             cpf: ord.customer_cpf,
           },
           shippingAddress: ord.shipping_address,
+          shippingMethod: ord.shipping_address?.shippingMethod || ord.shippingMethod,
+          trackingCode: ord.shipping_address?.trackingCode || ord.trackingCode,
+          labelUrl: ord.shipping_address?.labelUrl || ord.labelUrl,
+          shipmentId: ord.shipping_address?.shipmentId || ord.shipmentId,
           items: (ord.order_items || []).map((item: any) => ({
             id: item.id,
             model: {

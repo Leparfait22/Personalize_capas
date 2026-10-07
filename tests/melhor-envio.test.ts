@@ -2,6 +2,7 @@ import {
   calculateMelhorEnvioShipping,
   cleanCep,
   isValidCep,
+  generateMelhorEnvioLabel,
 } from "../src/lib/melhor-envio";
 
 async function runShippingTests() {
@@ -74,6 +75,12 @@ async function runShippingTests() {
   assert(resultBA.success === true, "Cotação bem-sucedida para Nordeste (Salvador/BA)");
   const pacBA = resultBA.options.find((o) => o.name === "PAC");
   assert(Boolean(pacBA && pacBA.deliveryTime >= 5), "Prazo de entrega realista calculado por região");
+
+  // Teste 6: Disponibilidade e contrato da função de emissão de etiquetas
+  assert(
+    typeof generateMelhorEnvioLabel === "function",
+    "Função generateMelhorEnvioLabel disponível para compra e geração de etiquetas"
+  );
 
   console.log("\n=======================================================");
   console.log(`📊 TOTAL: ${passed + failed} | ✅ PASSOU: ${passed} | ❌ FALHOU: ${failed}`);

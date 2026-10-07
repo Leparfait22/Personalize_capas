@@ -147,6 +147,8 @@ export interface Order {
   shippingCost: number;
   shippingMethod?: OrderShippingMethod;
   trackingCode?: string;
+  labelUrl?: string;
+  shipmentId?: string;
   discount: number;
   totalAmount: number;
   paymentMethod: "pix" | "credit_card";
