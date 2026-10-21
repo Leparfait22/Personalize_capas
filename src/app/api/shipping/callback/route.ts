@@ -1,4 +1,4 @@
-import { calculateMelhorEnvioShipping } from "@/lib/melhor-envio";
+import { calculateMelhorEnvioShipping, getMelhorEnvioConfig } from "@/lib/melhor-envio";
 import fs from "fs";
 import path from "path";
 
@@ -42,11 +42,13 @@ export async function GET(request: Request) {
     );
   }
 
-  const clientId = process.env.MELHOR_ENVIO_CLIENT_ID?.trim();
-  const clientSecret = process.env.MELHOR_ENVIO_CLIENT_SECRET?.trim();
-  const redirectUri = process.env.MELHOR_ENVIO_REDIRECT_URI?.trim();
-  const apiUrl = (process.env.MELHOR_ENVIO_URL || "https://sandbox.melhorenvio.com.br").replace(/\/$/, "");
-  const appContact = process.env.MELHOR_ENVIO_APP_CONTACT || "contato@snapcasebr.com";
+  const config = getMelhorEnvioConfig();
+  const clientId = config.clientId;
+  const clientSecret = config.clientSecret;
+  const redirectUri = config.redirectUri;
+  const apiUrl = config.apiUrl;
+  const appContact = config.appContact;
+  const isProd = config.environment === "production";
 
   try {
     const tokenRes = await fetch(`${apiUrl}/oauth/token`, {
@@ -98,20 +100,30 @@ export async function GET(request: Request) {
       const envPath = path.resolve(process.cwd(), ".env");
       if (fs.existsSync(envPath)) {
         let envContent = fs.readFileSync(envPath, "utf-8");
+
+        const tokenVarName = isProd ? "MELHOR_ENVIO_PROD_TOKEN" : "MELHOR_ENVIO_SANDBOX_TOKEN";
+        const refreshVarName = isProd ? "MELHOR_ENVIO_PROD_REFRESH_TOKEN" : "MELHOR_ENVIO_SANDBOX_REFRESH_TOKEN";
+
+        // Atualizar variável específica do ambiente
+        if (envContent.includes(`${tokenVarName}=`)) {
+          envContent = envContent.replace(new RegExp(`${tokenVarName}=.*`, "g"), `${tokenVarName}="${accessToken}"`);
+        } else {
+          envContent += `\n${tokenVarName}="${accessToken}"\n`;
+        }
+
+        // Manter também MELHOR_ENVIO_TOKEN em sincronia
         if (envContent.includes("MELHOR_ENVIO_TOKEN=")) {
           envContent = envContent.replace(/MELHOR_ENVIO_TOKEN=.*/g, `MELHOR_ENVIO_TOKEN="${accessToken}"`);
-        } else {
-          envContent += `\nMELHOR_ENVIO_TOKEN="${accessToken}"\n`;
         }
 
         if (refreshToken) {
-          if (envContent.includes("MELHOR_ENVIO_REFRESH_TOKEN=")) {
+          if (envContent.includes(`${refreshVarName}=`)) {
             envContent = envContent.replace(
-              /MELHOR_ENVIO_REFRESH_TOKEN=.*/g,
-              `MELHOR_ENVIO_REFRESH_TOKEN="${refreshToken}"`
+              new RegExp(`${refreshVarName}=.*`, "g"),
+              `${refreshVarName}="${refreshToken}"`
             );
           } else {
-            envContent += `MELHOR_ENVIO_REFRESH_TOKEN="${refreshToken}"\n`;
+            envContent += `${refreshVarName}="${refreshToken}"\n`;
           }
         }
         fs.writeFileSync(envPath, envContent, "utf-8");

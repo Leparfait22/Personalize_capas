@@ -167,6 +167,105 @@ function applyFreeShippingRule(options: ShippingOption[], subtotal: number): Shi
   });
 }
 
+export interface MelhorEnvioConfig {
+  environment: "sandbox" | "production";
+  apiUrl: string;
+  token: string;
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+  defaultFromCep: string;
+  appContact: string;
+  isSandbox: boolean;
+  fromName: string;
+  fromPhone: string;
+  fromDocument: string;
+  fromAddress: string;
+  fromNumber: string;
+  fromComplement: string;
+  fromDistrict: string;
+  fromCity: string;
+  fromState: string;
+}
+
+/**
+ * Retorna a configuração ativa do Melhor Envio baseada no ambiente (.env)
+ * Suporta alternar entre 'sandbox' (testes) e 'production' (conta do dono da loja)
+ */
+export function getMelhorEnvioConfig(): MelhorEnvioConfig {
+  const envSetting = (process.env.MELHOR_ENVIO_ENV || "").trim().toLowerCase();
+  const directUrl = (process.env.MELHOR_ENVIO_URL || "").trim();
+
+  // Ativa produção se explícito no MELHOR_ENVIO_ENV ou se a URL direta for www.melhorenvio.com.br
+  const isProduction =
+    envSetting === "production" ||
+    envSetting === "prod" ||
+    (!envSetting && directUrl.includes("www.melhorenvio.com.br"));
+
+  const environment: "sandbox" | "production" = isProduction ? "production" : "sandbox";
+  const defaultBaseUrl = isProduction
+    ? "https://www.melhorenvio.com.br"
+    : "https://sandbox.melhorenvio.com.br";
+
+  const apiUrl = (
+    isProduction
+      ? process.env.MELHOR_ENVIO_PROD_URL || directUrl || defaultBaseUrl
+      : process.env.MELHOR_ENVIO_SANDBOX_URL || directUrl || defaultBaseUrl
+  ).replace(/\/$/, "");
+
+  const token = (
+    isProduction
+      ? process.env.MELHOR_ENVIO_PROD_TOKEN || process.env.MELHOR_ENVIO_TOKEN || ""
+      : process.env.MELHOR_ENVIO_SANDBOX_TOKEN || process.env.MELHOR_ENVIO_TOKEN || ""
+  ).trim();
+
+  const clientId = (
+    isProduction
+      ? process.env.MELHOR_ENVIO_PROD_CLIENT_ID || process.env.MELHOR_ENVIO_CLIENT_ID || ""
+      : process.env.MELHOR_ENVIO_SANDBOX_CLIENT_ID || process.env.MELHOR_ENVIO_CLIENT_ID || ""
+  ).trim();
+
+  const clientSecret = (
+    isProduction
+      ? process.env.MELHOR_ENVIO_PROD_CLIENT_SECRET || process.env.MELHOR_ENVIO_CLIENT_SECRET || ""
+      : process.env.MELHOR_ENVIO_SANDBOX_CLIENT_SECRET || process.env.MELHOR_ENVIO_CLIENT_SECRET || ""
+  ).trim();
+
+  const redirectUri = (process.env.MELHOR_ENVIO_REDIRECT_URI || "").trim();
+
+  const defaultFromCep = cleanCep(
+    (isProduction
+      ? process.env.MELHOR_ENVIO_PROD_FROM_CEP || process.env.MELHOR_ENVIO_FROM_CEP
+      : process.env.MELHOR_ENVIO_SANDBOX_FROM_CEP || process.env.MELHOR_ENVIO_FROM_CEP) || "01001000"
+  );
+
+  const appContact =
+    (isProduction
+      ? process.env.MELHOR_ENVIO_PROD_APP_CONTACT || process.env.MELHOR_ENVIO_APP_CONTACT
+      : process.env.MELHOR_ENVIO_APP_CONTACT) || "contato@snapcasebr.com";
+
+  return {
+    environment,
+    apiUrl,
+    token,
+    clientId,
+    clientSecret,
+    redirectUri,
+    defaultFromCep,
+    appContact,
+    isSandbox: !isProduction && apiUrl.includes("sandbox"),
+    fromName: process.env.MELHOR_ENVIO_FROM_NAME || "Personalize Cases Store",
+    fromPhone: (process.env.MELHOR_ENVIO_FROM_PHONE || "11988887777").replace(/\D/g, ""),
+    fromDocument: (process.env.MELHOR_ENVIO_FROM_DOCUMENT || "29410948000109").replace(/\D/g, ""),
+    fromAddress: process.env.MELHOR_ENVIO_FROM_ADDRESS || "Avenida Paulista",
+    fromNumber: process.env.MELHOR_ENVIO_FROM_NUMBER || "1000",
+    fromComplement: process.env.MELHOR_ENVIO_FROM_COMPLEMENT || "Sala 101",
+    fromDistrict: process.env.MELHOR_ENVIO_FROM_DISTRICT || "Bela Vista",
+    fromCity: process.env.MELHOR_ENVIO_FROM_CITY || "São Paulo",
+    fromState: process.env.MELHOR_ENVIO_FROM_STATE || "SP",
+  };
+}
+
 /**
  * Calcula frete via API do Melhor Envio ou Fallback
  */
@@ -189,11 +288,12 @@ export async function calculateMelhorEnvioShipping({
     };
   }
 
-  const token = (process.env.MELHOR_ENVIO_TOKEN || "").trim();
-  const apiUrl = (process.env.MELHOR_ENVIO_URL || "https://sandbox.melhorenvio.com.br").replace(/\/$/, "");
-  const defaultFromCep = cleanCep(process.env.MELHOR_ENVIO_FROM_CEP || "01001000");
+  const config = getMelhorEnvioConfig();
+  const token = config.token;
+  const apiUrl = config.apiUrl;
+  const defaultFromCep = config.defaultFromCep;
   const fromCep = customFromCep ? cleanCep(customFromCep) : defaultFromCep;
-  const appContact = process.env.MELHOR_ENVIO_APP_CONTACT || "contato@snapcasebr.com";
+  const appContact = config.appContact;
 
   // Se não houver token configurado no .env, utiliza o fallback inteligente
   if (!token) {
@@ -359,11 +459,12 @@ export interface GenerateLabelResult {
  * (Consome do saldo da carteira de testes R$ 10.000 no Sandbox ou saldo real em Produção)
  */
 export async function generateMelhorEnvioLabel(order: Order): Promise<GenerateLabelResult> {
-  const token = (process.env.MELHOR_ENVIO_TOKEN || "").trim();
-  const apiUrl = (process.env.MELHOR_ENVIO_URL || "https://sandbox.melhorenvio.com.br").replace(/\/$/, "");
-  const defaultFromCep = cleanCep(process.env.MELHOR_ENVIO_FROM_CEP || "01001000");
-  const appContact = process.env.MELHOR_ENVIO_APP_CONTACT || "contato@snapcasebr.com";
-  const isSandbox = apiUrl.includes("sandbox");
+  const config = getMelhorEnvioConfig();
+  const token = config.token;
+  const apiUrl = config.apiUrl;
+  const defaultFromCep = config.defaultFromCep;
+  const appContact = config.appContact;
+  const isSandbox = config.isSandbox;
 
   if (!token) {
     throw new Error("Token do Melhor Envio não configurado.");
@@ -398,18 +499,18 @@ export async function generateMelhorEnvioLabel(order: Order): Promise<GenerateLa
   const cartPayload = {
     service: serviceId,
     from: {
-      name: "Personalize Cases Store",
-      phone: "11988887777",
+      name: config.fromName,
+      phone: config.fromPhone,
       email: appContact,
-      document: "29410948000109",
+      document: config.fromDocument,
       company_document: "",
       state_register: "",
-      address: "Avenida Paulista",
-      complement: "Sala 101",
-      number: "1000",
-      district: "Bela Vista",
-      city: "São Paulo",
-      state_abbr: "SP",
+      address: config.fromAddress,
+      complement: config.fromComplement,
+      number: config.fromNumber,
+      district: config.fromDistrict,
+      city: config.fromCity,
+      state_abbr: config.fromState,
       country_id: "BR",
       postal_code: defaultFromCep,
       note: "",

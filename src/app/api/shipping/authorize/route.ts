@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server";
+import { getMelhorEnvioConfig } from "@/lib/melhor-envio";
 
 export async function GET() {
-  const clientId = process.env.MELHOR_ENVIO_CLIENT_ID?.trim();
-  const redirectUri = process.env.MELHOR_ENVIO_REDIRECT_URI?.trim();
-  const apiUrl = (process.env.MELHOR_ENVIO_URL || "https://sandbox.melhorenvio.com.br").replace(/\/$/, "");
+  const { clientId, redirectUri, apiUrl, environment } = getMelhorEnvioConfig();
 
   if (!clientId || !redirectUri) {
     return NextResponse.json(
       {
-        error: "Configurações ausentes no .env",
-        details: "Defina MELHOR_ENVIO_CLIENT_ID e MELHOR_ENVIO_REDIRECT_URI no seu .env para autorizar o aplicativo.",
+        error: `Configurações ausentes no .env para o ambiente [${environment}]`,
+        details: `Defina Client ID e Redirect URI no seu .env para o ambiente [${environment}].`,
       },
       { status: 400 }
     );

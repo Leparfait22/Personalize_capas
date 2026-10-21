@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { calculateMelhorEnvioShipping } from "@/lib/melhor-envio";
+import { calculateMelhorEnvioShipping, getMelhorEnvioConfig } from "@/lib/melhor-envio";
 
 export async function GET() {
-  const token = (process.env.MELHOR_ENVIO_TOKEN || "").trim();
-  const clientId = (process.env.MELHOR_ENVIO_CLIENT_ID || "").trim();
-  const clientSecret = (process.env.MELHOR_ENVIO_CLIENT_SECRET || "").trim();
-  const redirectUri = (process.env.MELHOR_ENVIO_REDIRECT_URI || "").trim();
-  const apiUrl = (process.env.MELHOR_ENVIO_URL || "https://sandbox.melhorenvio.com.br").replace(/\/$/, "");
+  const config = getMelhorEnvioConfig();
+  const token = config.token;
+  const clientId = config.clientId;
+  const clientSecret = config.clientSecret;
+  const redirectUri = config.redirectUri;
+  const apiUrl = config.apiUrl;
 
   const hasToken = token.length > 20;
   const hasOAuthConfig = Boolean(clientId && clientSecret && redirectUri);
@@ -20,11 +21,12 @@ export async function GET() {
 
   return NextResponse.json({
     status: "ok",
+    environment: config.environment,
+    apiUrl,
     hasToken,
     hasOAuthConfig,
-    clientId,
+    clientId: clientId ? `${clientId.slice(0, 4)}...` : "",
     redirectUri,
-    apiUrl,
     isFallback: testQuote.isFallback,
     liveApiConnected: hasToken && !testQuote.isFallback,
     testQuoteOptionsCount: testQuote.options.length,
@@ -35,7 +37,7 @@ export async function GET() {
       deliveryTimeDays: o.deliveryTime,
     })),
     nextStep: hasToken
-      ? "Integração 100% pronta e ativa com a API Oficial!"
-      : "Acesse /api/shipping/authorize no seu navegador para vincular sua conta do Melhor Envio com 1 clique.",
+      ? `Integração 100% pronta e ativa no ambiente [${config.environment.toUpperCase()}]!`
+      : `Acesse /api/shipping/authorize no seu navegador para vincular sua conta do Melhor Envio (${config.environment}).`,
   });
 }
