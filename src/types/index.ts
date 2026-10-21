@@ -137,6 +137,24 @@ export interface OrderShippingMethod {
 
 export type OrderStatus = "pending" | "in_production" | "printed" | "shipped" | "completed";
 
+export type PaymentMethod = "pix" | "credit_card" | "debit_card";
+export type PaymentStatus = "paid" | "pending" | "failed" | "refunded";
+
+export interface PaymentDetails {
+  mercadopagoPaymentId?: string | number;
+  mercadopagoStatus?: string;
+  mercadopagoStatusDetail?: string;
+  pixQrCode?: string;
+  pixQrCodeBase64?: string;
+  ticketUrl?: string;
+  cardBrand?: string;
+  cardLastFour?: string;
+  installments?: number;
+  installmentAmount?: number;
+  preferenceId?: string;
+  initPoint?: string;
+}
+
 export interface Order {
   id: string;
   orderNumber: string;
@@ -151,11 +169,13 @@ export interface Order {
   shipmentId?: string;
   discount: number;
   totalAmount: number;
-  paymentMethod: "pix" | "credit_card";
-  paymentStatus: "paid" | "pending";
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  paymentDetails?: PaymentDetails;
   status: OrderStatus;
   createdAt: string;
   updatedAt: string;
   notes?: string;
 }
+
 

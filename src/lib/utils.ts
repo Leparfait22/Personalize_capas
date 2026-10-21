@@ -275,4 +275,41 @@ export function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
+/**
+ * Detecta a bandeira de cartão pelo número
+ */
+export function detectCardBrand(cardNumber: string): {
+  id: string;
+  name: string;
+  color: string;
+} {
+  const clean = cardNumber.replace(/\D/g, "");
+
+  if (
+    /^(4011|4312|4389|4514|4576|5041|5066|5067|5090|6277|6362|6363|6500|6516)/.test(
+      clean
+    )
+  ) {
+    return { id: "elo", name: "Elo", color: "bg-blue-600 text-white" };
+  }
+
+  if (/^(606282|3841)/.test(clean)) {
+    return { id: "hipercard", name: "Hipercard", color: "bg-red-600 text-white" };
+  }
+
+  if (/^4/.test(clean)) {
+    return { id: "visa", name: "Visa", color: "bg-indigo-600 text-white" };
+  }
+
+  if (/^(5[1-5]|222[1-9]|22[3-9]|2[3-6]|27[01]|2720)/.test(clean)) {
+    return { id: "master", name: "Mastercard", color: "bg-amber-600 text-white" };
+  }
+
+  if (/^3[47]/.test(clean)) {
+    return { id: "amex", name: "Amex", color: "bg-cyan-700 text-white" };
+  }
+
+  return { id: "generic", name: "Cartão", color: "bg-zinc-800 text-white" };
+}
+
 
