@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 interface AuthContextType {
   isAdmin: boolean;
   userEmail: string | null;
+  userName: string | null;
   isAuthModalOpen: boolean;
   setIsAuthModalOpen: (open: boolean) => void;
   login: (email: string, password?: string) => Promise<{ success: boolean; isAdmin: boolean; error?: string }>;
@@ -20,10 +21,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const ADMIN_STORAGE_KEY = "personalize_is_admin_v1";
 const USER_EMAIL_KEY = "personalize_user_email_v1";
+const USER_NAME_KEY = "personalize_user_name_v1";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const router = useRouter();
@@ -38,6 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (data.authenticated) {
             setIsAdmin(Boolean(data.isAdmin));
             setUserEmail(data.userEmail || (data.isAdmin ? "admin@snapcasebr.com" : "cliente@snapcasebr.com"));
+            setUserName(data.userName || (data.isAdmin ? "Administrador" : "Cliente"));
             return;
           }
         }
@@ -49,9 +53,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const savedAdmin = localStorage.getItem(ADMIN_STORAGE_KEY);
         const savedEmail = localStorage.getItem(USER_EMAIL_KEY);
+        const savedName = localStorage.getItem(USER_NAME_KEY);
         if (savedEmail) {
           setUserEmail(savedEmail);
           setIsAdmin(savedAdmin === "true");
+          setUserName(savedName || null);
         }
       } catch (e) {
         console.error("Erro ao carregar estado de autenticação local:", e);
@@ -75,17 +81,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = await res.json();
         const loggedIsAdmin = Boolean(data.user?.isAdmin);
         const loggedEmail = data.user?.email || email || "usuario@snapcasebr.com";
+        const loggedName = data.user?.name || (loggedIsAdmin ? "Administrador" : "Cliente");
 
         setIsAdmin(loggedIsAdmin);
         setUserEmail(loggedEmail);
+        setUserName(loggedName);
 
         try {
           localStorage.setItem(ADMIN_STORAGE_KEY, loggedIsAdmin ? "true" : "false");
           localStorage.setItem(USER_EMAIL_KEY, loggedEmail);
+          localStorage.setItem(USER_NAME_KEY, loggedName);
         } catch (e) {}
 
         setIsAuthModalOpen(false);
-        router.push("/admin");
+        if (loggedIsAdmin) {
+          router.push("/admin");
+        } else {
+          router.push("/minha-conta");
+        }
         return { success: true, isAdmin: loggedIsAdmin };
       } else {
         const errorData = await res.json().catch(() => ({}));
@@ -109,17 +122,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = await res.json();
         const regIsAdmin = Boolean(data.user?.isAdmin);
         const regEmail = data.user?.email || email;
+        const regName = data.user?.name || name;
 
         setIsAdmin(regIsAdmin);
         setUserEmail(regEmail);
+        setUserName(regName);
 
         try {
           localStorage.setItem(ADMIN_STORAGE_KEY, regIsAdmin ? "true" : "false");
           localStorage.setItem(USER_EMAIL_KEY, regEmail);
+          localStorage.setItem(USER_NAME_KEY, regName);
         } catch (e) {}
 
         setIsAuthModalOpen(false);
-        router.push("/admin");
+        if (regIsAdmin) {
+          router.push("/admin");
+        } else {
+          router.push("/minha-conta");
+        }
         return { success: true, isAdmin: regIsAdmin };
       } else {
         const errorData = await res.json().catch(() => ({}));
@@ -147,16 +167,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setIsAdmin(false);
     setUserEmail(null);
+    setUserName(null);
     try {
       localStorage.removeItem(ADMIN_STORAGE_KEY);
       localStorage.removeItem(USER_EMAIL_KEY);
+      localStorage.removeItem(USER_NAME_KEY);
     } catch (e) {}
     router.push("/");
   };
 
   const handleUserIconClick = () => {
-    if (userEmail || isAdmin) {
+    if (isAdmin) {
       router.push("/admin");
+    } else if (userEmail) {
+      router.push("/minha-conta");
     } else {
       setIsAuthModalOpen(true);
     }
@@ -167,6 +191,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         isAdmin,
         userEmail,
+        userName,
         isAuthModalOpen,
         setIsAuthModalOpen,
         login,

@@ -9,7 +9,7 @@ import Logo from "@/components/common/Logo";
 
 export default function Header() {
   const { totalItems, setIsCartOpen } = useCart();
-  const { isAdmin, handleUserIconClick } = useAuth();
+  const { isAdmin, userEmail, userName, handleUserIconClick } = useAuth();
 
   return (
     <>
@@ -45,23 +45,29 @@ export default function Header() {
           {/* Ações da Direita */}
           <div className="flex items-center gap-2">
 
-            {/* Botão de Usuário / Login (Condicional Admin) */}
+            {/* Botão de Usuário / Login (Condicional Admin / Cliente) */}
             <button
               type="button"
               onClick={handleUserIconClick}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all border ${
                 isAdmin
                   ? "bg-zinc-950 border-zinc-950 text-white hover:bg-zinc-800 shadow-sm"
+                  : userEmail
+                  ? "bg-white border-zinc-300 text-zinc-900 hover:bg-zinc-50 shadow-xs"
                   : "bg-zinc-100 hover:bg-zinc-200/80 border-zinc-200 text-zinc-800"
               }`}
-              title={isAdmin ? "Área do Lojista (Admin Conectado)" : "Login / Acesso"}
-              aria-label={isAdmin ? "Área do Lojista" : "Login de Usuário"}
+              title={isAdmin ? "Área do Lojista (Admin Conectado)" : userEmail ? "Meus Pedidos (Minha Conta)" : "Login / Acesso"}
+              aria-label={isAdmin ? "Área do Lojista" : userEmail ? "Minha Conta" : "Login de Usuário"}
             >
               <User className="w-4 h-4" />
               {isAdmin ? (
                 <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-bold text-white">
                   Lojista
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                </span>
+              ) : userEmail ? (
+                <span className="hidden sm:inline text-[11px] text-zinc-900 font-bold">
+                  {userName ? userName.split(" ")[0] : "Minha Conta"}
                 </span>
               ) : (
                 <span className="hidden sm:inline text-[11px] text-zinc-800 font-semibold">Entrar</span>

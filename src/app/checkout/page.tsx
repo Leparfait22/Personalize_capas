@@ -664,7 +664,7 @@ export default function CheckoutPage() {
               </h3>
               <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 font-medium">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Asaas Pagamentos</span>
+                <span>Pagamento 100% Seguro</span>
               </div>
             </div>
 
@@ -883,7 +883,7 @@ export default function CheckoutPage() {
                 <div className="pt-2 flex items-center gap-2 text-[11px] text-zinc-500">
                   <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                   <span>
-                    Ambiente seguro criptografado com tecnologia antifraude do Asaas.
+                    Ambiente seguro e criptografado com tecnologia antifraude e certificado SSL.
                   </span>
                 </div>
               </div>

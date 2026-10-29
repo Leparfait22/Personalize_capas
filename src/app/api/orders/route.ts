@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   }
 
   const isUserAdmin = session.isAdmin;
-  const userEmail = session.email;
+  const userEmail = (session.email || "").trim().toLowerCase();
 
   try {
     if (isSupabaseConfigured()) {
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
 
       // 🛡️ Regra de Ouro da Segurança: Se NÃO for Admin, força o filtro apenas pelo e-mail autenticado!
       if (!isUserAdmin) {
-        req = req.eq("customer_email", userEmail);
+        req = req.ilike("customer_email", userEmail);
       }
 
       if (status && status !== "all") {

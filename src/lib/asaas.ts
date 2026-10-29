@@ -306,7 +306,7 @@ export async function createAsaasPixPayment(order: Order): Promise<CreatePixResu
         success: true,
         paymentId: paymentId,
         status: "pending",
-        statusDetail: "Aguardando pagamento via PIX no Asaas",
+        statusDetail: "Aguardando pagamento via PIX",
         pixQrCode: qrData.payload || "",
         pixQrCodeBase64: qrBase64,
         ticketUrl: paymentData.invoiceUrl || paymentData.bankSlipUrl,
@@ -316,7 +316,7 @@ export async function createAsaasPixPayment(order: Order): Promise<CreatePixResu
       console.error("Erro ao criar pagamento Pix no Asaas:", err);
       // Fallback para modo simulado se a API falhar em ambiente de testes
       if (config.isSandbox) {
-        console.warn("Utilizando PIX simulado do Asaas como fallback no Sandbox.");
+        console.warn("Utilizando PIX simulado como fallback no Sandbox.");
       } else {
         return {
           success: false,
@@ -333,18 +333,18 @@ export async function createAsaasPixPayment(order: Order): Promise<CreatePixResu
 
   // MODO SIMULADO (Executado quando sem chaves ou em desenvolvimento local)
   const simulatedPaymentId = `pay_sim_${Date.now()}`;
-  const simulatedPixCode = `00020126580014br.gov.bcb.pix0136${simulatedPaymentId}@asaas.com520400005303986540${order.totalAmount.toFixed(
+  const simulatedPixCode = `00020126580014br.gov.bcb.pix0136${simulatedPaymentId}@pix.com.br520400005303986540${order.totalAmount.toFixed(
     2
   )}5802BR5925PERSONALIZE CASES6009SAO PAULO62070503***6304E72B`;
 
-  const qrSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200"><rect width="200" height="200" fill="#ffffff"/><rect x="20" y="20" width="50" height="50" fill="#000000"/><rect x="26" y="26" width="38" height="38" fill="#ffffff"/><rect x="34" y="34" width="22" height="22" fill="#000000"/><rect x="130" y="20" width="50" height="50" fill="#000000"/><rect x="136" y="26" width="38" height="38" fill="#ffffff"/><rect x="144" y="34" width="22" height="22" fill="#000000"/><rect x="20" y="130" width="50" height="50" fill="#000000"/><rect x="26" y="136" width="38" height="38" fill="#ffffff"/><rect x="34" y="144" width="22" height="22" fill="#000000"/><circle cx="100" cy="100" r="14" fill="#0038FF"/><path d="M96 93h8v14h-8z" fill="#ffffff"/><path d="M93 96h14v8h-14z" fill="#ffffff"/><rect x="90" y="30" width="20" height="15" fill="#000"/><rect x="80" y="150" width="30" height="20" fill="#000"/><rect x="130" y="90" width="20" height="30" fill="#000"/><rect x="160" y="140" width="20" height="20" fill="#000"/><text x="100" y="190" font-family="sans-serif" font-size="9" text-anchor="middle" fill="#666">PIX ASAAS SIMULADO</text></svg>`;
+  const qrSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200"><rect width="200" height="200" fill="#ffffff"/><rect x="20" y="20" width="50" height="50" fill="#000000"/><rect x="26" y="26" width="38" height="38" fill="#ffffff"/><rect x="34" y="34" width="22" height="22" fill="#000000"/><rect x="130" y="20" width="50" height="50" fill="#000000"/><rect x="136" y="26" width="38" height="38" fill="#ffffff"/><rect x="144" y="34" width="22" height="22" fill="#000000"/><rect x="20" y="130" width="50" height="50" fill="#000000"/><rect x="26" y="136" width="38" height="38" fill="#ffffff"/><rect x="34" y="144" width="22" height="22" fill="#000000"/><circle cx="100" cy="100" r="14" fill="#0038FF"/><path d="M96 93h8v14h-8z" fill="#ffffff"/><path d="M93 96h14v8h-14z" fill="#ffffff"/><rect x="90" y="30" width="20" height="15" fill="#000"/><rect x="80" y="150" width="30" height="20" fill="#000"/><rect x="130" y="90" width="20" height="30" fill="#000"/><rect x="160" y="140" width="20" height="20" fill="#000"/><text x="100" y="190" font-family="sans-serif" font-size="9" text-anchor="middle" fill="#666">PAGAMENTO PIX</text></svg>`;
   const qrBase64 = `data:image/svg+xml;base64,${Buffer.from(qrSvg).toString("base64")}`;
 
   return {
     success: true,
     paymentId: simulatedPaymentId,
     status: "pending",
-    statusDetail: "Aguardando pagamento via PIX (Simulação Asaas)",
+    statusDetail: "Aguardando pagamento via PIX",
     pixQrCode: simulatedPixCode,
     pixQrCodeBase64: qrBase64,
     ticketUrl: `https://sandbox.asaas.com/i/${simulatedPaymentId}`,
@@ -476,8 +476,8 @@ export async function createAsaasCardPayment(
         paymentId: resData.id,
         status: isApproved ? "approved" : "pending",
         statusDetail: isApproved
-          ? "Pagamento aprovado com sucesso pelo Asaas"
-          : "Pagamento em análise de risco no Asaas",
+          ? "Pagamento aprovado com sucesso"
+          : "Pagamento em análise de risco",
         cardBrand: brand.name,
         cardLastFour: resData.creditCard?.creditCardNumber || lastFour,
         installments,
@@ -521,7 +521,7 @@ export async function createAsaasCardPayment(
     success: true,
     paymentId: simulatedPaymentId,
     status: "approved",
-    statusDetail: "Pagamento aprovado instantaneamente (Simulação Asaas)",
+    statusDetail: "Pagamento aprovado instantaneamente",
     cardBrand: brand.name,
     cardLastFour: lastFour,
     installments,

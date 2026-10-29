@@ -12,13 +12,24 @@ export async function GET() {
       return NextResponse.json({ authenticated: false, isAdmin: false, userEmail: null });
     }
 
-    const sessionData = JSON.parse(sessionCookie.value);
+    let sessionData: any = null;
+    try {
+      sessionData = JSON.parse(sessionCookie.value);
+    } catch {
+      sessionData = JSON.parse(decodeURIComponent(sessionCookie.value));
+    }
+
+    if (!sessionData) {
+      return NextResponse.json({ authenticated: false, isAdmin: false, userEmail: null, userName: null });
+    }
+
     return NextResponse.json({
       authenticated: true,
       isAdmin: sessionData.isAdmin || false,
       userEmail: sessionData.email || null,
+      userName: sessionData.name || null,
     });
   } catch (err) {
-    return NextResponse.json({ authenticated: false, isAdmin: false, userEmail: null });
+    return NextResponse.json({ authenticated: false, isAdmin: false, userEmail: null, userName: null });
   }
 }

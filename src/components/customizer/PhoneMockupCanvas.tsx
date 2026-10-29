@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { PhoneModel, CaseFinish, CustomizationConfig } from "@/types";
 import { evaluateImageQuality } from "@/lib/utils";
+import { getEnrichedCameraModule } from "@/data/catalog";
 import { Move, Check } from "lucide-react";
 
 interface PhoneMockupCanvasProps {
@@ -214,8 +215,8 @@ export default function PhoneMockupCanvas({
 
     ctx.restore(); // Fecha clipping da capa
 
-    // 4. Módulo de Câmera e Lentes
-    const cam = model.cameraModule;
+    // 4. Módulo de Câmera e Lentes (com fallback inteligente de furos e lentes por modelo)
+    const cam = getEnrichedCameraModule(model);
     const camX = phoneX + (phoneW * cam.x) / 100;
     const camY = phoneY + (phoneH * cam.y) / 100;
     const camW = (phoneW * cam.width) / 100;

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   fetchSavedOrders,
   updateOrderStatusApi,
@@ -44,6 +45,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
   const { isAdmin, userEmail, login, register, logout } = useAuth();
   const [isRegisteringPage, setIsRegisteringPage] = useState(false);
   const [pageName, setPageName] = useState("");
@@ -133,7 +135,13 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [userEmail, isAdmin]);
+
+  useEffect(() => {
+    if (userEmail && !isAdmin) {
+      router.push("/minha-conta");
+    }
+  }, [userEmail, isAdmin, router]);
 
   // Filtragem por Data
   const filteredOrders = orders.filter((order) => {
@@ -165,10 +173,10 @@ export default function AdminDashboardPage() {
     if (searchQuery.trim() !== "") {
       const query = searchQuery.toLowerCase();
       matchSearch =
-        order.orderNumber.toLowerCase().includes(query) ||
-        order.customer.name.toLowerCase().includes(query) ||
-        order.customer.whatsapp.includes(query) ||
-        order.items.some((item) => item.model.name.toLowerCase().includes(query));
+        (order.orderNumber || "").toLowerCase().includes(query) ||
+        (order.customer?.name || "").toLowerCase().includes(query) ||
+        (order.customer?.whatsapp || "").includes(query) ||
+        (order.items || []).some((item) => (item.model?.name || "").toLowerCase().includes(query));
     }
 
     return matchDate && matchStatus && matchSearch;
@@ -176,9 +184,9 @@ export default function AdminDashboardPage() {
 
   // Estatísticas do Filtro Atual
   const totalOrdersCount = filteredOrders.length;
-  const totalRevenue = filteredOrders.reduce((sum, ord) => sum + ord.totalAmount, 0);
+  const totalRevenue = filteredOrders.reduce((sum, ord) => sum + (ord.totalAmount || 0), 0);
   const totalCasesToProduce = filteredOrders.reduce(
-    (sum, ord) => sum + ord.items.reduce((itemSum, item) => itemSum + item.quantity, 0),
+    (sum, ord) => sum + (ord.items || []).reduce((itemSum, item) => itemSum + (item.quantity || 1), 0),
     0
   );
 
@@ -451,223 +459,30 @@ export default function AdminDashboardPage() {
     );
   }
 
-  // 2. PAINEL DO CLIENTE (Renderização para credenciais de cliente simples)
+  // 2. Redirecionamento se for usuário simples (não-admin)
   if (!isAdmin && userEmail) {
-    const customerOrders = orders.filter(
-      (o) =>
-        o.customer.email.toLowerCase() === userEmail.toLowerCase() ||
-        userEmail.toLowerCase().includes(o.customer.name.toLowerCase())
-    );
-
-    const displayOrders = customerOrders.length > 0 ? customerOrders : orders;
-
     return (
-      <div className="min-h-screen bg-zinc-50 text-zinc-900 pb-16">
-        {/* Top Bar Cliente */}
-        <div className="bg-white border-b border-zinc-200 px-4 sm:px-6 lg:px-8 py-4 shadow-sm">
-          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-zinc-950 flex items-center justify-center text-white font-bold shadow-md">
-                <User className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-lg font-black text-zinc-950 font-display">
-                    Meus Pedidos
-                  </h1>
-                </div>
-                <p className="text-xs text-zinc-500">
-                  Olá, <span className="font-semibold text-zinc-900">{userEmail}</span>
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => logout()}
-              title="Sair da Conta"
-              className="flex items-center gap-1.5 px-3 py-2 bg-zinc-100 hover:bg-rose-50 text-zinc-700 hover:text-rose-600 rounded-xl text-xs font-bold border border-zinc-200 hover:border-rose-200 transition-colors shrink-0"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Sair</span>
-            </button>
+      <div className="min-h-[85vh] flex items-center justify-center p-4 bg-zinc-50">
+        <div className="bg-white border border-zinc-200 rounded-3xl p-8 max-w-sm w-full text-center space-y-4 shadow-sm">
+          <div className="w-12 h-12 bg-zinc-100 rounded-full flex items-center justify-center mx-auto text-zinc-600 animate-pulse">
+            <User className="w-6 h-6" />
           </div>
-        </div>
-
-        {/* Conteúdo Principal do Cliente */}
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-zinc-950 font-display flex items-center gap-2">
-              <Package className="w-5 h-5 text-zinc-950" />
-              Histórico de Pedidos ({displayOrders.length})
-            </h2>
-          </div>
-
-          {displayOrders.length === 0 ? (
-            <div className="bg-white border border-zinc-200 rounded-3xl p-12 text-center space-y-4 shadow-sm">
-              <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mx-auto text-zinc-400">
-                <Package className="w-8 h-8" />
-              </div>
-              <h3 className="text-base font-bold text-zinc-900">Você ainda não realizou nenhum pedido</h3>
-              <p className="text-xs text-zinc-500 max-w-sm mx-auto">
-                Crie sua primeira capa de celular personalizada na nossa loja virtual com a sua foto favorita!
-              </p>
-              <Link
-                href="/"
-                className="inline-flex items-center gap-2 px-5 py-3 bg-zinc-950 hover:bg-zinc-800 text-white rounded-xl font-bold text-xs shadow-md transition-all"
-              >
-                Personalizar Capinha Agora
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {displayOrders.map((order) => {
-                const getStatusText = (status: OrderStatus) => {
-                  switch (status) {
-                    case "pending":
-                      return { label: "Aguardando Pagamento", color: "bg-amber-100 text-amber-800 border-amber-200" };
-                    case "in_production":
-                      return { label: "Em Produção", color: "bg-blue-100 text-blue-800 border-blue-200" };
-                    case "printed":
-                      return { label: "Impresso & Embalado", color: "bg-purple-100 text-purple-800 border-purple-200" };
-                    case "shipped":
-                      return { label: "Em Transporte", color: "bg-indigo-100 text-indigo-800 border-indigo-200" };
-                    case "completed":
-                      return { label: "Entregue", color: "bg-emerald-100 text-emerald-800 border-emerald-200" };
-                    default:
-                      return { label: "Processando", color: "bg-zinc-100 text-zinc-800 border-zinc-200" };
-                  }
-                };
-
-                const statusInfo = getStatusText(order.status);
-
-                return (
-                  <div
-                    key={order.id}
-                    className="bg-white border border-zinc-200 rounded-3xl p-6 shadow-sm space-y-6 hover:border-zinc-300 transition-all"
-                  >
-                    {/* Header do Card de Pedido */}
-                    <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-zinc-100">
-                      <div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-base font-black text-zinc-950 font-display">
-                            Pedido #{order.orderNumber}
-                          </span>
-                          <span
-                            className={`text-xs font-bold px-3 py-1 rounded-full border ${statusInfo.color}`}
-                          >
-                            {statusInfo.label}
-                          </span>
-                        </div>
-                        <p className="text-xs text-zinc-500 mt-1 flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5" />
-                          Realizado em {formatDate(order.createdAt)}
-                        </p>
-                      </div>
-
-                      <div className="text-right">
-                        <p className="text-xs text-zinc-500">Valor Total</p>
-                        <p className="text-lg font-black text-zinc-950 font-display">
-                          {formatCurrency(order.totalAmount)}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Esteira Visual do Status */}
-                    <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-100">
-                      <p className="text-xs font-bold text-zinc-700 mb-3 flex items-center gap-1.5">
-                        <Clock className="w-4 h-4 text-zinc-950" />
-                        Status da Confecção:
-                      </p>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
-                        <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 font-bold flex items-center justify-center gap-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>1. Pedido Recebido</span>
-                        </div>
-                        <div
-                          className={`p-2 rounded-xl font-bold flex items-center justify-center gap-1.5 border ${
-                            order.status !== "pending"
-                              ? "bg-blue-50 border-blue-200 text-blue-800"
-                              : "bg-white border-zinc-200 text-zinc-400"
-                          }`}
-                        >
-                          <Printer className="w-3.5 h-3.5" />
-                          <span>2. Fila de Produção</span>
-                        </div>
-                        <div
-                          className={`p-2 rounded-xl font-bold flex items-center justify-center gap-1.5 border ${
-                            order.status === "printed" || order.status === "shipped" || order.status === "completed"
-                              ? "bg-purple-50 border-purple-200 text-purple-800"
-                              : "bg-white border-zinc-200 text-zinc-400"
-                          }`}
-                        >
-                          <Package className="w-3.5 h-3.5" />
-                          <span>3. Embalado</span>
-                        </div>
-                        <div
-                          className={`p-2 rounded-xl font-bold flex items-center justify-center gap-1.5 border ${
-                            order.status === "shipped" || order.status === "completed"
-                              ? "bg-indigo-50 border-indigo-200 text-indigo-800"
-                              : "bg-white border-zinc-200 text-zinc-400"
-                          }`}
-                        >
-                          <Truck className="w-3.5 h-3.5" />
-                          <span>4. Em Transporte</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Itens do Pedido */}
-                    <div className="space-y-3">
-                      <p className="text-xs font-bold text-zinc-700 uppercase tracking-wider">
-                        Itens no Pedido ({order.items.length})
-                      </p>
-                      <div className="divide-y divide-zinc-100">
-                        {order.items.map((item, idx) => (
-                          <div key={idx} className="py-3 flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                              {item.customization.imageUrl && (
-                                <img
-                                  src={item.customization.imageUrl}
-                                  alt={item.model.name}
-                                  className="w-12 h-12 object-contain rounded-xl bg-zinc-100 border border-zinc-200 p-1"
-                                />
-                              )}
-                              <div>
-                                <p className="text-xs font-bold text-zinc-950">
-                                  Capinha Personalizada - {item.model.name}
-                                </p>
-                                <p className="text-[11px] text-zinc-500">
-                                  Acabamento: <span className="font-semibold text-zinc-700">{item.finish.name}</span> · Qtd: {item.quantity}x
-                                </p>
-                              </div>
-                            </div>
-                            <span className="text-xs font-bold text-zinc-950">
-                              {formatCurrency(item.totalPrice)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Endereço de Envio */}
-                    <div className="pt-3 border-t border-zinc-100 text-xs text-zinc-600 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <p>
-                        <strong className="text-zinc-900">Endereço de Entrega:</strong>{" "}
-                        {order.shippingAddress.street}, {order.shippingAddress.number} -{" "}
-                        {order.shippingAddress.city}/{order.shippingAddress.state} (CEP: {order.shippingAddress.zipCode})
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <h2 className="text-sm font-bold text-zinc-900">Redirecionando para sua conta...</h2>
+          <p className="text-xs text-zinc-500">
+            A rota /admin é restrita à produção e gestão do lojista. Redirecionando você para a área do cliente.
+          </p>
+          <Link
+            href="/minha-conta"
+            className="inline-block px-5 py-2.5 bg-zinc-950 text-white rounded-xl text-xs font-bold shadow-md hover:bg-zinc-800 transition-all"
+          >
+            Acessar Meus Pedidos
+          </Link>
         </div>
       </div>
     );
   }
 
-  // 3. PAINEL DO ADMIN / LOJISTA (Renderização mantida quando isAdmin === true)
+  // 3. PAINEL DO ADMIN / LOJISTA (Renderização quando isAdmin === true)
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 pb-16">

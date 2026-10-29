@@ -1,4 +1,4 @@
-import { PhoneModel, CaseFinish } from "@/types";
+import { PhoneModel, CaseFinish, CameraModuleConfig } from "@/types";
 
 export const INITIAL_PHONE_MODELS: PhoneModel[] = [
   // --- APPLE ---
@@ -113,6 +113,34 @@ export const INITIAL_PHONE_MODELS: PhoneModel[] = [
     },
   },
   {
+    id: "iphone-15-pro",
+    brand: "Apple",
+    name: "iPhone 15 Pro",
+    tagline: "Titânio Aeroespacial / Tela 6.1\" / Câmera Tripla Pro",
+    popular: false,
+    basePrice: 79.90,
+    dimensionsMm: { width: 70.6, height: 146.6, thickness: 8.25 },
+    aspectRatio: 70.6 / 146.6,
+    cornerRadius: 14,
+    cameraModule: {
+      x: 6,
+      y: 3.5,
+      width: 44,
+      height: 24,
+      borderRadius: 22,
+      shape: "island-triple",
+      backgroundColor: "rgba(24, 30, 42, 0.92)",
+      borderColor: "rgba(255, 255, 255, 0.2)",
+      lenses: [
+        { x: 16.5, y: 8, radius: 5.8, ringColor: "#94a3b8" },
+        { x: 16.5, y: 20, radius: 5.8, ringColor: "#94a3b8" },
+        { x: 33.5, y: 14, radius: 5.8, ringColor: "#94a3b8" },
+      ],
+      flash: { x: 33.5, y: 7.5, radius: 2.2, shape: "circle" },
+      lidar: { x: 33.5, y: 20.5, radius: 2.2 },
+    },
+  },
+  {
     id: "iphone-15",
     brand: "Apple",
     name: "iPhone 15 / 15 Plus",
@@ -204,6 +232,33 @@ export const INITIAL_PHONE_MODELS: PhoneModel[] = [
     basePrice: 79.90,
     dimensionsMm: { width: 70.6, height: 147.0, thickness: 7.6 },
     aspectRatio: 70.6 / 147.0,
+    cornerRadius: 14,
+    cameraModule: {
+      x: 6,
+      y: 3.5,
+      width: 26,
+      height: 32,
+      borderRadius: 14,
+      shape: "linear-column",
+      backgroundColor: "transparent",
+      borderColor: "transparent",
+      lenses: [
+        { x: 14, y: 7.5, radius: 5.8, ringColor: "#e2e8f0" },
+        { x: 14, y: 18.5, radius: 5.8, ringColor: "#e2e8f0" },
+        { x: 14, y: 29.5, radius: 5.8, ringColor: "#e2e8f0" },
+      ],
+      flash: { x: 26, y: 10, radius: 2.0, shape: "circle" },
+    },
+  },
+  {
+    id: "samsung-galaxy-s24-plus",
+    brand: "Samsung",
+    name: "Galaxy S24+",
+    tagline: "Dynamic AMOLED 6.7\" / 3 Câmeras Verticais",
+    popular: false,
+    basePrice: 79.90,
+    dimensionsMm: { width: 75.9, height: 158.5, thickness: 7.7 },
+    aspectRatio: 75.9 / 158.5,
     cornerRadius: 14,
     cameraModule: {
       x: 6,
@@ -371,6 +426,32 @@ export const INITIAL_PHONE_MODELS: PhoneModel[] = [
       flash: { x: 35, y: 16, radius: 2.0, shape: "circle" },
     },
   },
+  {
+    id: "motorola-moto-g54",
+    brand: "Motorola",
+    name: "Moto g54",
+    tagline: "50MP OIS / 6.5\" 120Hz / Top Vendas Brasil",
+    popular: true,
+    basePrice: 79.90,
+    dimensionsMm: { width: 73.8, height: 161.6, thickness: 8.0 },
+    aspectRatio: 73.8 / 161.6,
+    cornerRadius: 14,
+    cameraModule: {
+      x: 6,
+      y: 3.5,
+      width: 42,
+      height: 24,
+      borderRadius: 20,
+      shape: "rounded-square",
+      backgroundColor: "rgba(30, 41, 59, 0.9)",
+      borderColor: "rgba(255, 255, 255, 0.2)",
+      lenses: [
+        { x: 16, y: 8, radius: 6.0, ringColor: "#cbd5e1" },
+        { x: 16, y: 20, radius: 6.0, ringColor: "#cbd5e1" },
+      ],
+      flash: { x: 33, y: 14, radius: 2.2, shape: "circle" },
+    },
+  },
 ];
 
 export const CASE_FINISHES: CaseFinish[] = [
@@ -450,3 +531,202 @@ export const CASE_COLORS = [
   { id: "purple", name: "Roxo Imperial", hex: "#6b21a8", textColor: "#ffffff" },
   { id: "wine", name: "Bordô / Vinho", hex: "#881337", textColor: "#ffffff" },
 ];
+
+/**
+ * Garante que qualquer modelo (do Supabase, localStorage ou customizado)
+ * possua a configuração completa de lentes, flash, lidar e posicionamento
+ * para renderizar com precisão os furos de câmera no mockup interativo.
+ */
+export function getEnrichedCameraModule(
+  model: Partial<PhoneModel> | null | undefined
+): CameraModuleConfig {
+  if (!model) {
+    return INITIAL_PHONE_MODELS[0].cameraModule;
+  }
+
+  const currentCam = model.cameraModule;
+  // Se já possui lentes preenchidas e válidas, retorna direto
+  if (currentCam && Array.isArray(currentCam.lenses) && currentCam.lenses.length > 0) {
+    return currentCam as CameraModuleConfig;
+  }
+
+  const normalize = (str?: string) =>
+    (str || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]/g, "");
+
+  const modelIdNorm = normalize(model.id);
+  const modelNameNorm = normalize(model.name);
+
+  // Procura correspondência em INITIAL_PHONE_MODELS por ID ou Nome
+  const matched = INITIAL_PHONE_MODELS.find((m) => {
+    const mIdNorm = normalize(m.id);
+    const mNameNorm = normalize(m.name);
+
+    if (mIdNorm === modelIdNorm || mNameNorm === modelNameNorm) return true;
+    if (modelIdNorm && (mIdNorm.includes(modelIdNorm) || modelIdNorm.includes(mIdNorm))) return true;
+    if (modelNameNorm && (mNameNorm.includes(modelNameNorm) || modelNameNorm.includes(mNameNorm))) return true;
+
+    // Correspondências específicas para variações de IDs de banco
+    if (modelNameNorm.includes("16promax") && mNameNorm.includes("16promax")) return true;
+    if (modelNameNorm.includes("16pro") && !modelNameNorm.includes("max") && mNameNorm.includes("16pro") && !mNameNorm.includes("max")) return true;
+    if (modelNameNorm.includes("15promax") && mNameNorm.includes("15promax")) return true;
+    if (modelNameNorm.includes("15pro") && !modelNameNorm.includes("max") && mNameNorm.includes("15pro") && !mNameNorm.includes("max")) return true;
+    if (modelNameNorm.includes("16") && !modelNameNorm.includes("pro") && mNameNorm.includes("16") && !mNameNorm.includes("pro")) return true;
+    if (modelNameNorm.includes("15") && !modelNameNorm.includes("pro") && mNameNorm.includes("15") && !mNameNorm.includes("pro")) return true;
+    if (modelNameNorm.includes("13") && mNameNorm.includes("13")) return true;
+    if (modelNameNorm.includes("14") && !modelNameNorm.includes("xiaomi") && mNameNorm.includes("14") && !mNameNorm.includes("xiaomi")) return true;
+    if (modelNameNorm.includes("s24ultra") && mNameNorm.includes("s24ultra")) return true;
+    if ((modelNameNorm.includes("s24plus") || modelNameNorm.includes("s24+")) && (mNameNorm.includes("s24plus") || mNameNorm.includes("s24+"))) return true;
+    if (modelNameNorm.includes("s24") && mNameNorm.includes("s24")) return true;
+    if (modelNameNorm.includes("a55") && mNameNorm.includes("a55")) return true;
+    if (modelNameNorm.includes("redminote13pro") && mNameNorm.includes("redminote13pro")) return true;
+    if (modelNameNorm.includes("xiaomi14") && mNameNorm.includes("xiaomi14")) return true;
+    if (modelNameNorm.includes("pocox6") && mNameNorm.includes("pocox6")) return true;
+    if (modelNameNorm.includes("edge50pro") && mNameNorm.includes("edge50pro")) return true;
+    if (modelNameNorm.includes("motog54") && mNameNorm.includes("motog54")) return true;
+
+    return false;
+  });
+
+  if (matched?.cameraModule) {
+    return {
+      ...matched.cameraModule,
+      ...(currentCam || {}),
+      lenses: (currentCam?.lenses && currentCam.lenses.length > 0) ? currentCam.lenses : matched.cameraModule.lenses,
+      flash: currentCam?.flash || matched.cameraModule.flash,
+      lidar: currentCam?.lidar || matched.cameraModule.lidar,
+      badgeText: currentCam?.badgeText || matched.cameraModule.badgeText,
+      badgePosition: currentCam?.badgePosition || matched.cameraModule.badgePosition,
+      partitionLines: currentCam?.partitionLines ?? matched.cameraModule.partitionLines,
+      backgroundColor: currentCam?.backgroundColor ?? matched.cameraModule.backgroundColor,
+      borderColor: currentCam?.borderColor ?? matched.cameraModule.borderColor,
+    };
+  }
+
+  // Fallback baseado no formato físico do módulo (shape)
+  const shape = currentCam?.shape || "island-triple";
+  return generateFallbackCameraByShape(shape, currentCam);
+}
+
+function generateFallbackCameraByShape(
+  shape: string,
+  currentCam?: Partial<CameraModuleConfig>
+): CameraModuleConfig {
+  switch (shape) {
+    case "island-triple":
+      return {
+        x: currentCam?.x ?? 6,
+        y: currentCam?.y ?? 3.5,
+        width: currentCam?.width ?? 45,
+        height: currentCam?.height ?? 24,
+        borderRadius: currentCam?.borderRadius ?? 24,
+        shape: "island-triple",
+        backgroundColor: currentCam?.backgroundColor ?? "rgba(22, 29, 41, 0.94)",
+        borderColor: currentCam?.borderColor ?? "rgba(255, 255, 255, 0.22)",
+        lenses: [
+          { x: 17, y: 8, radius: 6.2, ringColor: "#cbd5e1" },
+          { x: 17, y: 20, radius: 6.2, ringColor: "#cbd5e1" },
+          { x: 35, y: 14, radius: 6.2, ringColor: "#cbd5e1" },
+        ],
+        flash: { x: 35, y: 7.5, radius: 2.2, shape: "circle" },
+        lidar: { x: 35, y: 20.5, radius: 2.2 },
+      };
+
+    case "vertical-pill":
+      return {
+        x: currentCam?.x ?? 6.5,
+        y: currentCam?.y ?? 3.5,
+        width: currentCam?.width ?? 21,
+        height: currentCam?.height ?? 22,
+        borderRadius: currentCam?.borderRadius ?? 30,
+        shape: "vertical-pill",
+        backgroundColor: currentCam?.backgroundColor ?? "rgba(18, 24, 38, 0.96)",
+        borderColor: currentCam?.borderColor ?? "rgba(255, 255, 255, 0.28)",
+        lenses: [
+          { x: 17, y: 8.2, radius: 6.2, ringColor: "#e2e8f0" },
+          { x: 17, y: 19.8, radius: 6.2, ringColor: "#e2e8f0" },
+        ],
+        flash: { x: 31, y: 14, radius: 2.4, shape: "circle" },
+      };
+
+    case "linear-column":
+      return {
+        x: currentCam?.x ?? 6,
+        y: currentCam?.y ?? 3.5,
+        width: currentCam?.width ?? 26,
+        height: currentCam?.height ?? 32,
+        borderRadius: currentCam?.borderRadius ?? 14,
+        shape: "linear-column",
+        backgroundColor: currentCam?.backgroundColor ?? "transparent",
+        borderColor: "transparent",
+        lenses: [
+          { x: 14, y: 7.5, radius: 5.8, ringColor: "#e2e8f0" },
+          { x: 14, y: 18.5, radius: 5.8, ringColor: "#e2e8f0" },
+          { x: 14, y: 29.5, radius: 5.8, ringColor: "#e2e8f0" },
+        ],
+        flash: { x: 26, y: 10, radius: 2.0, shape: "circle" },
+      };
+
+    case "island-quad":
+      return {
+        x: currentCam?.x ?? 6,
+        y: currentCam?.y ?? 3.0,
+        width: currentCam?.width ?? 38,
+        height: currentCam?.height ?? 33,
+        borderRadius: currentCam?.borderRadius ?? 8,
+        shape: "island-quad",
+        backgroundColor: currentCam?.backgroundColor ?? "transparent",
+        borderColor: "transparent",
+        lenses: [
+          { x: 14.5, y: 6.5, radius: 5.8, ringColor: "#cbd5e1" },
+          { x: 14.5, y: 17.5, radius: 5.8, ringColor: "#cbd5e1" },
+          { x: 14.5, y: 28.5, radius: 5.8, ringColor: "#cbd5e1" },
+          { x: 30, y: 20, radius: 4.2, ringColor: "#94a3b8" },
+        ],
+        flash: { x: 30, y: 6.5, radius: 2.2, shape: "circle" },
+        lidar: { x: 30, y: 13, radius: 2.4 },
+      };
+
+    case "full-visor":
+      return {
+        x: currentCam?.x ?? 4,
+        y: currentCam?.y ?? 2.8,
+        width: currentCam?.width ?? 92,
+        height: currentCam?.height ?? 23,
+        borderRadius: currentCam?.borderRadius ?? 14,
+        shape: "full-visor",
+        backgroundColor: currentCam?.backgroundColor ?? "rgba(15, 23, 42, 0.96)",
+        borderColor: currentCam?.borderColor ?? "rgba(255, 255, 255, 0.22)",
+        badgeText: currentCam?.badgeText ?? "64MP OIS",
+        badgePosition: currentCam?.badgePosition ?? { x: 70, y: 13 },
+        lenses: [
+          { x: 16, y: 8.5, radius: 5.5, ringColor: "#cbd5e1" },
+          { x: 35, y: 8.5, radius: 5.5, ringColor: "#cbd5e1" },
+          { x: 16, y: 19.5, radius: 5.5, ringColor: "#cbd5e1" },
+        ],
+        flash: { x: 35, y: 19.5, radius: 3.5, shape: "circle" },
+      };
+
+    case "rounded-square":
+    default:
+      return {
+        x: currentCam?.x ?? 6,
+        y: currentCam?.y ?? 3.5,
+        width: currentCam?.width ?? 42,
+        height: currentCam?.height ?? 23,
+        borderRadius: currentCam?.borderRadius ?? 20,
+        shape: "rounded-square",
+        backgroundColor: currentCam?.backgroundColor ?? "rgba(24, 30, 42, 0.92)",
+        borderColor: currentCam?.borderColor ?? "rgba(255, 255, 255, 0.2)",
+        lenses: [
+          { x: 16, y: 8, radius: 6.0, ringColor: "#94a3b8" },
+          { x: 33, y: 19, radius: 6.0, ringColor: "#94a3b8" },
+        ],
+        flash: { x: 33, y: 8, radius: 2.2, shape: "circle" },
+      };
+  }
+}
+

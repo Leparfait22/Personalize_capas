@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import { INITIAL_PHONE_MODELS } from "@/data/catalog";
+import { INITIAL_PHONE_MODELS, getEnrichedCameraModule } from "@/data/catalog";
 import { PhoneModel } from "@/types";
 import { isServerAdmin } from "@/lib/auth-server";
 
@@ -13,19 +13,36 @@ export async function GET() {
         .order("name", { ascending: true });
 
       if (!error && data && data.length > 0) {
-        const formatted: PhoneModel[] = data.map((item) => ({
-          id: item.id,
-          brand: item.brand,
-          name: item.name,
-          tagline: item.tagline,
-          popular: item.popular,
-          basePrice: Number(item.base_price),
-          dimensionsMm: item.dimensions_mm,
-          aspectRatio: Number(item.aspect_ratio),
-          cornerRadius: Number(item.corner_radius || 14),
-          cameraModule: item.camera_module,
-        }));
-        return NextResponse.json(formatted);
+        const formatted: PhoneModel[] = data.map((item) => {
+          const rawModel: PhoneModel = {
+            id: item.id,
+            brand: item.brand,
+            name: item.name,
+            tagline: item.tagline,
+            popular: item.popular,
+            basePrice: Number(item.base_price),
+            dimensionsMm: item.dimensions_mm,
+            aspectRatio: Number(item.aspect_ratio),
+            cornerRadius: Number(item.corner_radius || 14),
+            cameraModule: item.camera_module,
+          };
+          rawModel.cameraModule = getEnrichedCameraModule(rawModel);
+          return rawModel;
+        });
+
+        // Garantir que todos os modelos ricos do catálogo estejam disponíveis sem duplicatas de marca
+        const normName = (name: string) =>
+          name
+            .toLowerCase()
+            .replace(/^(apple|samsung|xiaomi|motorola)\s*/gi, "")
+            .replace(/[^a-z0-9]/g, "");
+
+        const existingKeys = new Set(formatted.map((m) => normName(m.name)));
+        const additionalCatalogModels = INITIAL_PHONE_MODELS.filter(
+          (m) => !existingKeys.has(normName(m.name))
+        );
+
+        return NextResponse.json([...formatted, ...additionalCatalogModels]);
       }
     }
   } catch (err) {

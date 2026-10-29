@@ -1,5 +1,5 @@
 import { Order, PhoneModel } from "@/types";
-import { INITIAL_PHONE_MODELS, CASE_FINISHES } from "@/data/catalog";
+import { INITIAL_PHONE_MODELS, CASE_FINISHES, getEnrichedCameraModule } from "@/data/catalog";
 
 const STORAGE_KEYS = {
   ORDERS: "personalize_cases_orders_v1",
@@ -249,8 +249,11 @@ export async function fetchPhoneModelsApi(): Promise<PhoneModel[]> {
   try {
     const res = await fetch("/api/models");
     if (res.ok) {
-      const models = await res.json();
-      return models;
+      const models: PhoneModel[] = await res.json();
+      return models.map((m) => ({
+        ...m,
+        cameraModule: getEnrichedCameraModule(m),
+      }));
     }
   } catch (err) {
     console.error("Erro ao buscar modelos da API:", err);
@@ -341,7 +344,11 @@ export function getStoredPhoneModels(): PhoneModel[] {
       localStorage.setItem(STORAGE_KEYS.MODELS, JSON.stringify(INITIAL_PHONE_MODELS));
       return INITIAL_PHONE_MODELS;
     }
-    return JSON.parse(data);
+    const parsed: PhoneModel[] = JSON.parse(data);
+    return parsed.map((m) => ({
+      ...m,
+      cameraModule: getEnrichedCameraModule(m),
+    }));
   } catch (err) {
     console.error("Erro ao carregar modelos:", err);
     return INITIAL_PHONE_MODELS;

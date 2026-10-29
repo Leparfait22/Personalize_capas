@@ -6,7 +6,7 @@ import CustomizerControls from "@/components/customizer/CustomizerControls";
 import ModelSelector from "@/components/customizer/ModelSelector";
 import SpecsSummary from "@/components/customizer/SpecsSummary";
 import { PhoneModel, CaseFinish, CustomizationConfig } from "@/types";
-import { INITIAL_PHONE_MODELS, CASE_FINISHES } from "@/data/catalog";
+import { INITIAL_PHONE_MODELS, CASE_FINISHES, getEnrichedCameraModule } from "@/data/catalog";
 import { fetchPhoneModelsApi } from "@/lib/storage";
 import { useCart } from "@/context/CartContext";
 import {
@@ -33,6 +33,17 @@ export default function Home() {
       const fetched = await fetchPhoneModelsApi();
       if (fetched && fetched.length > 0) {
         setModels(fetched);
+        // Sincroniza selectedModel com o modelo correspondente da lista carregada
+        setSelectedModel((curr) => {
+          const match = fetched.find(
+            (m) =>
+              m.id === curr.id ||
+              m.name.toLowerCase() === curr.name.toLowerCase() ||
+              m.id.replace(/^(apple-|samsung-|xiaomi-|motorola-)/, "") ===
+                curr.id.replace(/^(apple-|samsung-|xiaomi-|motorola-)/, "")
+          );
+          return match ? { ...match, cameraModule: getEnrichedCameraModule(match) } : curr;
+        });
       }
     }
     loadModels();
@@ -72,7 +83,11 @@ export default function Home() {
   };
 
   const handleSelectModel = (model: PhoneModel) => {
-    setSelectedModel(model);
+    const enriched = {
+      ...model,
+      cameraModule: getEnrichedCameraModule(model),
+    };
+    setSelectedModel(enriched);
     setCustomization((prev) => ({ ...prev, modelId: model.id }));
   };
 
@@ -90,7 +105,10 @@ export default function Home() {
     if (modelId) {
       const found = models.find((m) => m.id === modelId);
       if (found) {
-        setSelectedModel(found);
+        setSelectedModel({
+          ...found,
+          cameraModule: getEnrichedCameraModule(found),
+        });
       }
     }
   };

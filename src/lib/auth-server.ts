@@ -17,7 +17,15 @@ export async function getServerSession(): Promise<ServerSession | null> {
 
     if (!sessionCookie?.value) return null;
 
-    const data = JSON.parse(sessionCookie.value);
+    let data: any = null;
+    try {
+      data = JSON.parse(sessionCookie.value);
+    } catch {
+      data = JSON.parse(decodeURIComponent(sessionCookie.value));
+    }
+
+    if (!data) return null;
+
     return {
       email: data.email || "",
       isAdmin: Boolean(data.isAdmin),
