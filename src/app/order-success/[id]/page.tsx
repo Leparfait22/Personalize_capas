@@ -154,7 +154,7 @@ export default function OrderSuccessPage() {
 
         <span className="text-xs font-bold uppercase tracking-widest text-zinc-500">
           {isPaid
-            ? "Pagamento Confirmado pelo Mercado Pago!"
+            ? "Pagamento Confirmado!"
             : "Pedido Registrado · Aguardando Pagamento"}
         </span>
 
@@ -212,11 +212,11 @@ export default function OrderSuccessPage() {
               <div className="p-3 bg-white rounded-2xl shadow-md border border-zinc-200 shrink-0 text-center relative group">
                 <img
                   src={qrImageSrc}
-                  alt="QR Code PIX Mercado Pago"
+                  alt="QR Code PIX Asaas"
                   className="w-44 h-44 object-contain mx-auto"
                 />
                 <span className="text-[10px] font-semibold text-zinc-400 mt-1 block">
-                  Mercado Pago Pix
+                  PIX Banco Central / Asaas
                 </span>
               </div>
 
@@ -268,7 +268,7 @@ export default function OrderSuccessPage() {
                       className="inline-flex items-center gap-1.5 text-xs text-emerald-700 hover:text-emerald-800 font-semibold underline"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
-                      Visualizar comprovante no Mercado Pago
+                      Visualizar comprovante oficial
                     </a>
                   </div>
                 )}
@@ -276,9 +276,9 @@ export default function OrderSuccessPage() {
             </div>
           ) : (
             <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center gap-3 text-emerald-900 text-xs font-medium">
-              <Sparkles className="w-5 h-5 text-emerald-600 shrink-0" />
+
               <span>
-                <strong>Pagamento identificado com sucesso!</strong> Seu pedido foi enviado para o setor de impressão gráfica.
+                <strong>Pagamento confirmado!</strong> Seu pedido foi enviado para o setor de produção.
               </span>
             </div>
           )}
@@ -335,7 +335,7 @@ export default function OrderSuccessPage() {
 
           <div className="flex items-center gap-2 pt-1 text-[11px] text-zinc-500">
             <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>Processado com autorização instantânea antifraude do Mercado Pago.</span>
+            <span>Processado com autorização instantânea antifraude do Asaas.</span>
           </div>
         </div>
       )}

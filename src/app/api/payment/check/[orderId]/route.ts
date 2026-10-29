@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { fetchAsaasPayment } from "@/lib/asaas";
 import { fetchMercadoPagoPayment } from "@/lib/mercadopago";
 
 export async function GET(
@@ -23,13 +24,39 @@ export async function GET(
 
       if (!error && order) {
         const paymentDetails = order.shipping_address?.paymentDetails;
+        const asaasPaymentId = paymentDetails?.asaasPaymentId;
         const mpPaymentId = paymentDetails?.mercadopagoPaymentId;
 
-        // Se ainda estiver pendente e tivermos um ID do Mercado Pago, checa status em tempo real na API do MP
-        if (order.payment_status === "pending" && mpPaymentId) {
+        // 1. Checagem em tempo real via Asaas
+        if (order.payment_status === "pending" && asaasPaymentId) {
+          const asaasData = await fetchAsaasPayment(asaasPaymentId);
+          if (
+            asaasData &&
+            (asaasData.status === "CONFIRMED" || asaasData.status === "RECEIVED")
+          ) {
+            await supabase
+              .from("orders")
+              .update({
+                payment_status: "paid",
+                status: order.status === "pending" ? "in_production" : order.status,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", order.id);
+
+            return NextResponse.json({
+              paid: true,
+              paymentStatus: "paid",
+              orderStatus: order.status === "pending" ? "in_production" : order.status,
+              asaasStatus: asaasData.status,
+              mercadopagoStatus: "approved",
+            });
+          }
+        }
+
+        // 2. Fallback de verificação retroativa para Mercado Pago (se o pedido for antigo)
+        if (order.payment_status === "pending" && mpPaymentId && !asaasPaymentId) {
           const mpData = await fetchMercadoPagoPayment(mpPaymentId);
           if (mpData && mpData.status === "approved") {
-            // Atualiza para pago
             await supabase
               .from("orders")
               .update({

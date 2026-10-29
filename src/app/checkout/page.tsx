@@ -246,7 +246,7 @@ export default function CheckoutPage() {
     };
 
     try {
-      // 1. Processar Pagamento via API do Mercado Pago
+      // 1. Processar Pagamento via API do Asaas
       const payRes = await fetch("/api/payment/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -271,7 +271,7 @@ export default function CheckoutPage() {
       if (!payRes.ok || payData.error || payData.status === "rejected") {
         setErrorMessage(
           payData.error ||
-            "Pagamento não autorizado pelo Mercado Pago. Verifique os dados do cartão ou escolha pagar com PIX."
+            "Pagamento não autorizado pelo emissor do cartão. Verifique os dados digitados ou escolha pagar via PIX."
         );
         setLoading(false);
         return;
@@ -664,7 +664,7 @@ export default function CheckoutPage() {
               </h3>
               <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 font-medium">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Mercado Pago</span>
+                <span>Asaas Pagamentos</span>
               </div>
             </div>
 
@@ -883,7 +883,7 @@ export default function CheckoutPage() {
                 <div className="pt-2 flex items-center gap-2 text-[11px] text-zinc-500">
                   <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                   <span>
-                    Ambiente seguro criptografado com tecnologia antifraude do Mercado Pago.
+                    Ambiente seguro criptografado com tecnologia antifraude do Asaas.
                   </span>
                 </div>
               </div>

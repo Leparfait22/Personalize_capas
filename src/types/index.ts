@@ -141,6 +141,10 @@ export type PaymentMethod = "pix" | "credit_card" | "debit_card";
 export type PaymentStatus = "paid" | "pending" | "failed" | "refunded";
 
 export interface PaymentDetails {
+  gateway?: "asaas" | "mercadopago";
+  asaasPaymentId?: string;
+  asaasStatus?: string;
+  asaasStatusDetail?: string;
   mercadopagoPaymentId?: string | number;
   mercadopagoStatus?: string;
   mercadopagoStatusDetail?: string;
@@ -153,6 +157,7 @@ export interface PaymentDetails {
   installmentAmount?: number;
   preferenceId?: string;
   initPoint?: string;
+  paidAt?: string;
 }
 
 export interface Order {

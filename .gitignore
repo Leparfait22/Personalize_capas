@@ -7,6 +7,10 @@
 /coverage
 /scripts
 scripts/
+/tests/
+tests/
+*.test.ts
+*.test.js
 test-*.mjs
 test-*.js
 test-*.ts

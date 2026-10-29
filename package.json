@@ -7,8 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "npx tsx tests/mercadopago.test.ts && npx tsx tests/melhor-envio.test.ts && npx tsx tests/security-audit.test.ts && npx tsx tests/auth-attacks.test.ts",
-    "test:payment": "npx tsx tests/mercadopago.test.ts",
+    "test": "npx tsx tests/asaas.test.ts && npx tsx tests/melhor-envio.test.ts && npx tsx tests/security-audit.test.ts && npx tsx tests/auth-attacks.test.ts",
+    "test:payment": "npx tsx tests/asaas.test.ts",
     "test:shipping": "npx tsx tests/melhor-envio.test.ts",
     "test:security": "npx tsx tests/security-audit.test.ts",
     "test:auth": "npx tsx tests/auth-attacks.test.ts"

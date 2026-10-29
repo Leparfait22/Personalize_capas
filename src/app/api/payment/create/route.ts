@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { Order } from "@/types";
 import {
-  createPixPayment,
-  createCardPayment,
-  createCheckoutPreference,
+  createAsaasPixPayment,
+  createAsaasCardPayment,
   CardPaymentInput,
-} from "@/lib/mercadopago";
+} from "@/lib/asaas";
 
 export async function POST(request: Request) {
   try {
@@ -13,7 +12,7 @@ export async function POST(request: Request) {
     const { order, cardInput, type } = body as {
       order: Order;
       cardInput?: CardPaymentInput;
-      type?: "pix" | "card" | "preference";
+      type?: "pix" | "card";
     };
 
     if (!order || !order.id || !order.totalAmount || !order.customer) {
@@ -23,13 +22,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const host = request.headers.get("host") || "localhost:3000";
-    const protocol = request.headers.get("x-forwarded-proto") || "http";
-    const baseUrl = `${protocol}://${host}`;
-
-    // 1. Processamento de PIX (QR Code & Copia e Cola)
+    // 1. Processamento de PIX via Asaas (QR Code & Copia e Cola)
     if (order.paymentMethod === "pix" || type === "pix") {
-      const pixResult = await createPixPayment(order, baseUrl);
+      const pixResult = await createAsaasPixPayment(order);
 
       return NextResponse.json({
         success: pixResult.success,
@@ -38,31 +33,36 @@ export async function POST(request: Request) {
         statusDetail: pixResult.statusDetail,
         paymentMethod: "pix",
         paymentDetails: {
+          gateway: "asaas",
+          asaasPaymentId: pixResult.paymentId,
+          asaasStatus: pixResult.status,
+          asaasStatusDetail: pixResult.statusDetail,
+          // Compatibilidade retroativa
           mercadopagoPaymentId: pixResult.paymentId,
           mercadopagoStatus: pixResult.status,
-          mercadopagoStatusDetail: pixResult.statusDetail,
           pixQrCode: pixResult.pixQrCode,
           pixQrCodeBase64: pixResult.pixQrCodeBase64,
           ticketUrl: pixResult.ticketUrl,
         },
         isSimulated: pixResult.isSimulated,
+        error: pixResult.error,
       });
     }
 
-    // 2. Processamento de Cartão de Crédito ou Cartão de Débito
+    // 2. Processamento de Cartão de Crédito transparente via Asaas
     if (
       order.paymentMethod === "credit_card" ||
       order.paymentMethod === "debit_card" ||
       type === "card"
     ) {
-      const isDebit = order.paymentMethod === "debit_card" || Boolean(cardInput?.isDebit);
-      const cardResult = await createCardPayment(
+      const cardResult = await createAsaasCardPayment(
         order,
-        {
-          ...(cardInput || {}),
-          isDebit,
-        },
-        baseUrl
+        cardInput || {
+          cardNumber: "",
+          cardHolderName: "",
+          expiry: "",
+          cvv: "",
+        }
       );
 
       return NextResponse.json({
@@ -70,11 +70,15 @@ export async function POST(request: Request) {
         paymentId: cardResult.paymentId,
         status: cardResult.status,
         statusDetail: cardResult.statusDetail,
-        paymentMethod: isDebit ? "debit_card" : "credit_card",
+        paymentMethod: "credit_card",
         paymentDetails: {
+          gateway: "asaas",
+          asaasPaymentId: cardResult.paymentId,
+          asaasStatus: cardResult.status,
+          asaasStatusDetail: cardResult.statusDetail,
+          // Compatibilidade retroativa
           mercadopagoPaymentId: cardResult.paymentId,
           mercadopagoStatus: cardResult.status,
-          mercadopagoStatusDetail: cardResult.statusDetail,
           cardBrand: cardResult.cardBrand,
           cardLastFour: cardResult.cardLastFour,
           installments: cardResult.installments,
@@ -82,17 +86,6 @@ export async function POST(request: Request) {
         },
         isSimulated: cardResult.isSimulated,
         error: cardResult.error,
-      });
-    }
-
-    // 3. Fallback: Preferência Mercado Pago (Checkout Pro)
-    const preference = await createCheckoutPreference(order, baseUrl);
-    if (preference) {
-      return NextResponse.json({
-        success: true,
-        preferenceId: preference.id,
-        initPoint: preference.initPoint,
-        sandboxInitPoint: preference.sandboxInitPoint,
       });
     }
 
