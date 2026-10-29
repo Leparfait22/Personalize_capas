@@ -27,6 +27,10 @@ export async function GET(
             cpf: ord.customer_cpf,
           },
           shippingAddress: ord.shipping_address,
+          shippingMethod: ord.shipping_address?.shippingMethod || ord.shippingMethod,
+          trackingCode: ord.shipping_address?.trackingCode || ord.trackingCode,
+          labelUrl: ord.shipping_address?.labelUrl || ord.labelUrl,
+          shipmentId: ord.shipping_address?.shipmentId || ord.shipmentId,
           items: (ord.order_items || []).map((item: any) => ({
             id: item.id,
             model: {
@@ -63,6 +67,7 @@ export async function GET(
           totalAmount: Number(ord.total_amount),
           paymentMethod: ord.payment_method,
           paymentStatus: ord.payment_status,
+          paymentDetails: ord.shipping_address?.paymentDetails || ord.payment_details || undefined,
           status: ord.status,
           createdAt: ord.created_at,
           updatedAt: ord.updated_at,

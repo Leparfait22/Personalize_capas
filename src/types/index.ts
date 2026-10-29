@@ -112,7 +112,53 @@ export interface OrderShippingAddress {
   state: string;
 }
 
+export interface ShippingOption {
+  id: number | string;
+  name: string; // Ex: "PAC", "SEDEX", ".Package", "Mini Envios"
+  company: {
+    id?: number;
+    name: string; // Ex: "Correios", "Jadlog"
+    picture?: string;
+  };
+  price: number;
+  finalPrice: number;
+  deliveryTime: number; // Prazo em dias úteis
+  deliveryRange?: { min: number; max: number };
+  error?: string;
+}
+
+export interface OrderShippingMethod {
+  id: number | string;
+  name: string;
+  company: string;
+  price: number;
+  deliveryTime: number;
+}
+
 export type OrderStatus = "pending" | "in_production" | "printed" | "shipped" | "completed";
+
+export type PaymentMethod = "pix" | "credit_card" | "debit_card";
+export type PaymentStatus = "paid" | "pending" | "failed" | "refunded";
+
+export interface PaymentDetails {
+  gateway?: "asaas" | "mercadopago";
+  asaasPaymentId?: string;
+  asaasStatus?: string;
+  asaasStatusDetail?: string;
+  mercadopagoPaymentId?: string | number;
+  mercadopagoStatus?: string;
+  mercadopagoStatusDetail?: string;
+  pixQrCode?: string;
+  pixQrCodeBase64?: string;
+  ticketUrl?: string;
+  cardBrand?: string;
+  cardLastFour?: string;
+  installments?: number;
+  installmentAmount?: number;
+  preferenceId?: string;
+  initPoint?: string;
+  paidAt?: string;
+}
 
 export interface Order {
   id: string;
@@ -122,12 +168,19 @@ export interface Order {
   items: CartItem[];
   subtotal: number;
   shippingCost: number;
+  shippingMethod?: OrderShippingMethod;
+  trackingCode?: string;
+  labelUrl?: string;
+  shipmentId?: string;
   discount: number;
   totalAmount: number;
-  paymentMethod: "pix" | "credit_card";
-  paymentStatus: "paid" | "pending";
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  paymentDetails?: PaymentDetails;
   status: OrderStatus;
   createdAt: string;
   updatedAt: string;
   notes?: string;
 }
+
+

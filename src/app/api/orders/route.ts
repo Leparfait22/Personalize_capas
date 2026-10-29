@@ -57,6 +57,10 @@ export async function GET(request: Request) {
             cpf: ord.customer_cpf,
           },
           shippingAddress: ord.shipping_address,
+          shippingMethod: ord.shipping_address?.shippingMethod || ord.shippingMethod,
+          trackingCode: ord.shipping_address?.trackingCode || ord.trackingCode,
+          labelUrl: ord.shipping_address?.labelUrl || ord.labelUrl,
+          shipmentId: ord.shipping_address?.shipmentId || ord.shipmentId,
           items: (ord.order_items || []).map((item: any) => ({
             id: item.id,
             model: {
@@ -93,6 +97,7 @@ export async function GET(request: Request) {
           totalAmount: Number(ord.total_amount),
           paymentMethod: ord.payment_method,
           paymentStatus: ord.payment_status,
+          paymentDetails: ord.shipping_address?.paymentDetails || ord.payment_details || undefined,
           status: ord.status,
           createdAt: ord.created_at,
           updatedAt: ord.updated_at,
@@ -256,7 +261,12 @@ export async function POST(request: Request) {
         customer_email: order.customer.email,
         customer_whatsapp: order.customer.whatsapp,
         customer_cpf: order.customer.cpf,
-        shipping_address: order.shippingAddress,
+        shipping_address: {
+          ...order.shippingAddress,
+          shippingMethod: order.shippingMethod || null,
+          trackingCode: order.trackingCode || null,
+          paymentDetails: order.paymentDetails || null,
+        },
         subtotal: order.subtotal,
         shipping_cost: order.shippingCost,
         discount: order.discount,
