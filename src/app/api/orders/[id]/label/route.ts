@@ -94,7 +94,19 @@ export async function POST(
       return NextResponse.json({ error: "Pedido não encontrado." }, { status: 404 });
     }
 
-    // 2. Chamar a API do Melhor Envio para gerar e pagar a etiqueta com o saldo
+    // 🔒 2. Validação: A etiqueta só pode ser emitida se o pedido estiver com pagamento confirmado
+    const isPaid =
+      order.paymentStatus === "paid" ||
+      ["in_production", "printed", "shipped", "completed"].includes(order.status);
+
+    if (!isPaid) {
+      return NextResponse.json(
+        { error: "A etiqueta de envio só pode ser gerada após a confirmação do pagamento do pedido." },
+        { status: 400 }
+      );
+    }
+
+    // 3. Chamar a API do Melhor Envio para gerar e pagar a etiqueta com o saldo
     const labelResult = await generateMelhorEnvioLabel(order);
 
     if (!labelResult.success) {

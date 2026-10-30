@@ -86,6 +86,17 @@ export default function AdminDashboardPage() {
   const [copiedTracking, setCopiedTracking] = useState<string | null>(null);
 
   const handleGenerateLabel = async (orderId: string) => {
+    const targetOrder = orders.find((o) => o.id === orderId);
+    const isPaid =
+      targetOrder &&
+      (targetOrder.paymentStatus === "paid" ||
+        ["in_production", "printed", "shipped", "completed"].includes(targetOrder.status));
+
+    if (!isPaid) {
+      alert("A etiqueta só pode ser emitida após a confirmação do pagamento do pedido.");
+      return;
+    }
+
     setGeneratingLabelId(orderId);
     try {
       const res = await fetch(`/api/orders/${orderId}/label`, {
@@ -878,26 +889,46 @@ export default function AdminDashboardPage() {
                           <Printer className="w-3.5 h-3.5" />
                           <span>Imprimir Etiqueta (PDF)</span>
                         </a>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled={generatingLabelId === order.id}
-                          onClick={() => handleGenerateLabel(order.id)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-zinc-950 hover:bg-zinc-800 disabled:opacity-60 text-white rounded-lg text-xs font-bold transition-colors shadow-xs cursor-pointer"
-                        >
-                          {generatingLabelId === order.id ? (
-                            <>
-                              <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                              <span>Emitindo Etiqueta...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Tag className="w-3.5 h-3.5 text-zinc-300" />
-                              <span>Gerar Etiqueta (Melhor Envio)</span>
-                            </>
-                          )}
-                        </button>
-                      )}
+                      ) : (() => {
+                        const isPaid =
+                          order.paymentStatus === "paid" ||
+                          ["in_production", "printed", "shipped", "completed"].includes(order.status);
+
+                        if (!isPaid) {
+                          return (
+                            <button
+                              type="button"
+                              disabled
+                              title="O pagamento ainda não foi confirmado!"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-zinc-100 border border-zinc-200/90 text-zinc-400 rounded-lg text-xs font-semibold cursor-not-allowed select-none transition-colors"
+                            >
+                              <Lock className="w-3.5 h-3.5 text-zinc-400" />
+                              <span>Gerar Etiqueta (Aguardando Pagamento)</span>
+                            </button>
+                          );
+                        }
+
+                        return (
+                          <button
+                            type="button"
+                            disabled={generatingLabelId === order.id}
+                            onClick={() => handleGenerateLabel(order.id)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-zinc-950 hover:bg-zinc-800 disabled:opacity-60 text-white rounded-lg text-xs font-bold transition-colors shadow-xs cursor-pointer"
+                          >
+                            {generatingLabelId === order.id ? (
+                              <>
+                                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                <span>Emitindo Etiqueta...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Tag className="w-3.5 h-3.5 text-zinc-300" />
+                                <span>Gerar Etiqueta (Melhor Envio)</span>
+                              </>
+                            )}
+                          </button>
+                        );
+                      })()}
                     </div>
                   </div>
 

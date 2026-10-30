@@ -6,6 +6,18 @@ import {
 } from "@/lib/mercadopago";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
+export async function GET() {
+  return NextResponse.json({
+    status: "ok",
+    service: "Payment Webhook (Asaas / Mercado Pago)",
+    timestamp: new Date().toISOString(),
+  });
+}
+
+export async function HEAD() {
+  return new Response(null, { status: 200 });
+}
+
 export async function POST(request: Request) {
   try {
     const url = new URL(request.url);
