@@ -7,6 +7,10 @@ import { uploadImageToStorage } from "@/lib/r2";
 import { INITIAL_PHONE_MODELS, CASE_FINISHES } from "@/data/catalog";
 import { sanitizeInput } from "@/lib/utils";
 
+// Forçar execução dinâmica e desativar cache em rota de pedidos
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 // In-memory fallback para desenvolvimento se Supabase ainda não estiver conectado
 let inMemoryOrders: Order[] = getInitialDemoOrders();
 

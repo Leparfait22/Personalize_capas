@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import { Order, ShippingOption } from "@/types";
 
 interface CalculateShipmentInput {
@@ -267,6 +269,88 @@ export function getMelhorEnvioConfig(): MelhorEnvioConfig {
 }
 
 /**
+ * Atualiza automaticamente o token do Melhor Envio usando o refresh_token se expirar
+ */
+export async function refreshMelhorEnvioToken(): Promise<string | null> {
+  const config = getMelhorEnvioConfig();
+  const isProduction = config.environment === "production";
+  const refreshToken = (
+    isProduction
+      ? process.env.MELHOR_ENVIO_PROD_REFRESH_TOKEN || process.env.MELHOR_ENVIO_REFRESH_TOKEN
+      : process.env.MELHOR_ENVIO_SANDBOX_REFRESH_TOKEN || process.env.MELHOR_ENVIO_REFRESH_TOKEN
+  )?.trim();
+
+  if (!refreshToken || !config.clientId || !config.clientSecret) {
+    return null;
+  }
+
+  try {
+    const params = new URLSearchParams({
+      grant_type: "refresh_token",
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
+      refresh_token: refreshToken,
+    });
+
+    const res = await fetch(`${config.apiUrl}/oauth/token`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": `PersonalizeCases (${config.appContact})`,
+      },
+      body: params.toString(),
+    });
+
+    if (!res.ok) {
+      console.warn(`Falha no refresh de token do Melhor Envio (HTTP ${res.status})`);
+      return null;
+    }
+
+    const data = await res.json();
+    const newAccessToken = data.access_token;
+    const newRefreshToken = data.refresh_token;
+
+    if (newAccessToken) {
+      if (isProduction) {
+        process.env.MELHOR_ENVIO_PROD_TOKEN = newAccessToken;
+        if (newRefreshToken) process.env.MELHOR_ENVIO_PROD_REFRESH_TOKEN = newRefreshToken;
+      } else {
+        process.env.MELHOR_ENVIO_SANDBOX_TOKEN = newAccessToken;
+        if (newRefreshToken) process.env.MELHOR_ENVIO_SANDBOX_REFRESH_TOKEN = newRefreshToken;
+      }
+      process.env.MELHOR_ENVIO_TOKEN = newAccessToken;
+
+      try {
+        const envPath = path.resolve(process.cwd(), ".env");
+        if (fs.existsSync(envPath)) {
+          let envContent = fs.readFileSync(envPath, "utf-8");
+          const tokenVar = isProduction ? "MELHOR_ENVIO_PROD_TOKEN" : "MELHOR_ENVIO_SANDBOX_TOKEN";
+          const refreshVar = isProduction ? "MELHOR_ENVIO_PROD_REFRESH_TOKEN" : "MELHOR_ENVIO_SANDBOX_REFRESH_TOKEN";
+
+          if (envContent.includes(`${tokenVar}=`)) {
+            envContent = envContent.replace(new RegExp(`${tokenVar}=.*`, "g"), `${tokenVar}="${newAccessToken}"`);
+          }
+          if (newRefreshToken && envContent.includes(`${refreshVar}=`)) {
+            envContent = envContent.replace(new RegExp(`${refreshVar}=.*`, "g"), `${refreshVar}="${newRefreshToken}"`);
+          }
+          fs.writeFileSync(envPath, envContent, "utf-8");
+        }
+      } catch (err) {
+        // Silencioso se não tiver permissão de arquivo no runtime
+      }
+
+      console.log(`✅ Token do Melhor Envio (${config.environment}) renovado com sucesso via refresh_token!`);
+      return newAccessToken;
+    }
+  } catch (err) {
+    console.error("Erro ao renovar token do Melhor Envio:", err);
+  }
+
+  return null;
+}
+
+/**
  * Calcula frete via API do Melhor Envio ou Fallback
  */
 export async function calculateMelhorEnvioShipping({
@@ -340,7 +424,7 @@ export async function calculateMelhorEnvioShipping({
   };
 
   try {
-    const response = await fetch(`${apiUrl}/api/v2/me/shipment/calculate`, {
+    let response = await fetch(`${apiUrl}/api/v2/me/shipment/calculate`, {
       method: "POST",
       headers: {
         Accept: "application/json",
@@ -350,6 +434,24 @@ export async function calculateMelhorEnvioShipping({
       },
       body: JSON.stringify(payload),
     });
+
+    // Se retornar 401 Unauthenticated, tenta renovar o token automaticamente e retentar
+    if (response.status === 401) {
+      console.warn("Melhor Envio respondeu 401. Tentando renovação automática de token...");
+      const newToken = await refreshMelhorEnvioToken();
+      if (newToken) {
+        response = await fetch(`${apiUrl}/api/v2/me/shipment/calculate`, {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${newToken}`,
+            "User-Agent": `PersonalizeCases (${appContact})`,
+          },
+          body: JSON.stringify(payload),
+        });
+      }
+    }
 
     if (!response.ok) {
       console.warn(`Melhor Envio API respondeu status ${response.status}. Ativando fallback de contingência.`);
@@ -495,16 +597,19 @@ export async function generateMelhorEnvioLabel(order: Order): Promise<GenerateLa
     "User-Agent": `PersonalizeCases (${appContact})`,
   };
 
-  // 1. Montagem do Carrinho do Melhor Envio
+  // 1. Montagem do Carrinho do Melhor Envio (Suporta tanto CPF quanto CNPJ para remetente e destinatário)
+  const isSenderCompany = config.fromDocument.length === 14;
+  const isReceiverCompany = cleanCpf.length === 14;
+
   const cartPayload = {
     service: serviceId,
     from: {
       name: config.fromName,
       phone: config.fromPhone,
       email: appContact,
-      document: config.fromDocument,
-      company_document: "",
-      state_register: "",
+      document: isSenderCompany ? "" : config.fromDocument,
+      company_document: isSenderCompany ? config.fromDocument : "",
+      state_register: (process.env.MELHOR_ENVIO_FROM_STATE_REGISTER || "").trim(),
       address: config.fromAddress,
       complement: config.fromComplement,
       number: config.fromNumber,
@@ -519,8 +624,8 @@ export async function generateMelhorEnvioLabel(order: Order): Promise<GenerateLa
       name: order.customer.name,
       phone: cleanPhone.length >= 10 ? cleanPhone : "11999999999",
       email: order.customer.email,
-      document: cleanCpf.length === 11 ? cleanCpf : "34218904822",
-      company_document: "",
+      document: isReceiverCompany ? "" : (cleanCpf.length === 11 ? cleanCpf : "34218904822"),
+      company_document: isReceiverCompany ? cleanCpf : "",
       state_register: "",
       address: order.shippingAddress.street || "Rua do Cliente",
       complement: order.shippingAddress.complement || "",
@@ -555,15 +660,33 @@ export async function generateMelhorEnvioLabel(order: Order): Promise<GenerateLa
   };
 
   // Passo 1: Inserir Envio no Carrinho
-  const cartRes = await fetch(`${apiUrl}/api/v2/me/cart`, {
+  let cartRes = await fetch(`${apiUrl}/api/v2/me/cart`, {
     method: "POST",
     headers,
     body: JSON.stringify(cartPayload),
   });
 
+  if (cartRes.status === 401) {
+    console.warn("Melhor Envio respondeu 401 ao adicionar ao carrinho. Tentando renovação automática de token...");
+    const newToken = await refreshMelhorEnvioToken();
+    if (newToken) {
+      headers.Authorization = `Bearer ${newToken}`;
+      cartRes = await fetch(`${apiUrl}/api/v2/me/cart`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(cartPayload),
+      });
+    }
+  }
+
   const cartData = await cartRes.json();
   if (!cartRes.ok || !cartData.id) {
     console.error("Erro ao adicionar ao carrinho do Melhor Envio:", cartData);
+    if (cartRes.status === 401) {
+      throw new Error(
+        "Token do Melhor Envio inválido ou desautenticado (401 Unauthenticated). Atualize suas credenciais no painel do Melhor Envio."
+      );
+    }
     throw new Error(cartData.message || cartData.error || "Erro ao adicionar remessa ao carrinho.");
   }
 
@@ -573,49 +696,86 @@ export async function generateMelhorEnvioLabel(order: Order): Promise<GenerateLa
   const serviceName = cartData.service?.name || order.shippingMethod?.name || "Frete";
   const price = parseFloat(cartData.price || "0");
 
-  // Passo 2: Checkout (Pagar Etiqueta com Saldo da Carteira de Testes R$ 10.000)
+  // Passo 2: Checkout (Pagar Etiqueta com Saldo da Carteira)
   const checkoutRes = await fetch(`${apiUrl}/api/v2/me/shipment/checkout`, {
     method: "POST",
     headers,
     body: JSON.stringify({ orders: [shipmentId] }),
   });
 
-  const checkoutData = await checkoutRes.json();
+  const checkoutData = await checkoutRes.json().catch(() => ({}));
   if (!checkoutRes.ok) {
-    console.warn("Aviso no checkout do Melhor Envio:", checkoutData);
+    console.error("Erro no checkout do Melhor Envio:", checkoutData);
+    if (checkoutData?.message?.includes("unauthorized") || checkoutRes.status === 403) {
+      throw new Error(
+        "Seu token do Melhor Envio não possui o escopo 'shipping-checkout' para pagar a etiqueta. Reautorize ou gere um token com todas as permissões."
+      );
+    }
+    throw new Error(
+      checkoutData?.message || checkoutData?.error || "Saldo insuficiente ou erro no pagamento da etiqueta no Melhor Envio."
+    );
   }
 
   // Passo 3: Solicitar Geração da Etiqueta
-  try {
-    await fetch(`${apiUrl}/api/v2/me/shipment/generate`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ orders: [shipmentId] }),
-    });
-  } catch (genErr) {
-    console.warn("Aviso ao solicitar generate da etiqueta:", genErr);
-  }
+  const genRes = await fetch(`${apiUrl}/api/v2/me/shipment/generate`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ orders: [shipmentId] }),
+  });
 
-  // Passo 4: Obter URL de Impressão Pública da Etiqueta
-  let labelUrl = "";
-  try {
-    const printRes = await fetch(`${apiUrl}/api/v2/me/shipment/print`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ mode: "public", orders: [shipmentId] }),
-    });
-
-    if (printRes.ok) {
-      const printData = await printRes.json();
-      labelUrl = printData.url || "";
+  if (!genRes.ok) {
+    const genData = await genRes.json().catch(() => ({}));
+    console.error("Erro ao solicitar generate no Melhor Envio:", genData);
+    if (genData?.message?.includes("unauthorized") || genRes.status === 403) {
+      throw new Error(
+        "Seu token do Melhor Envio não possui o escopo 'shipping-generate' para emitir a etiqueta com a transportadora."
+      );
     }
-  } catch (printErr) {
-    console.warn("Aviso ao buscar URL de impressão:", printErr);
+    throw new Error(
+      genData?.message || genData?.error || "Erro ao solicitar a geração da etiqueta na transportadora."
+    );
   }
 
-  // Fallback para URL direta de impressão do Melhor Envio caso a resposta não venha com link
+  // Passo 4: Obter URL de Impressão Pública da Etiqueta (com retentativas para aguardar processamento assíncrono)
+  let labelUrl = "";
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) {
+      // Aguardar 2.5s entre tentativas para a transportadora finalizar o PDF
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+    }
+
+    try {
+      const printRes = await fetch(`${apiUrl}/api/v2/me/shipment/print`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ mode: "public", orders: [shipmentId] }),
+      });
+
+      if (printRes.ok) {
+        const printData = await printRes.json();
+        if (printData?.url) {
+          labelUrl = printData.url;
+          break;
+        }
+      } else {
+        const errData = await printRes.json().catch(() => ({}));
+        if (errData?.message?.includes("unauthorized") || printRes.status === 403) {
+          throw new Error(
+            "Seu token do Melhor Envio não possui o escopo 'shipping-print' para imprimir a etiqueta."
+          );
+        }
+      }
+    } catch (printErr: any) {
+      if (printErr?.message?.includes("shipping-print")) {
+        throw printErr;
+      }
+      console.warn(`Tentativa ${attempt + 1} de busca de impressão:`, printErr);
+    }
+  }
+
+  // Fallback seguro: se a etiqueta foi gerada mas a URL pública demorar, direciona para o painel de envios oficial
   if (!labelUrl) {
-    labelUrl = `${apiUrl}/api/v2/me/shipment/print/${shipmentId}`;
+    labelUrl = `${apiUrl}/painel/gerenciar/envios`;
   }
 
   // Passo 5: Obter Detalhes e Código de Rastreamento

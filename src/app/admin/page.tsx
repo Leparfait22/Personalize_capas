@@ -46,7 +46,7 @@ import { useAuth } from "@/context/AuthContext";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const { isAdmin, userEmail, login, register, logout } = useAuth();
+  const { isAdmin, userEmail, login, register, logout, isLoaded } = useAuth();
   const [isRegisteringPage, setIsRegisteringPage] = useState(false);
   const [pageName, setPageName] = useState("");
   const [pageEmail, setPageEmail] = useState("");
@@ -56,6 +56,7 @@ export default function AdminDashboardPage() {
   const [isSubmittingPageLogin, setIsSubmittingPageLogin] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [models, setModels] = useState<PhoneModel[]>([]);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [dateFilter, setDateFilter] = useState<"yesterday" | "today" | "week" | "all">("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -138,21 +139,32 @@ export default function AdminDashboardPage() {
   };
 
   const loadData = async () => {
-    const fetchedOrders = await fetchSavedOrders();
-    const fetchedModels = await fetchPhoneModelsApi();
-    setOrders(fetchedOrders);
-    setModels(fetchedModels);
+    setIsLoadingOrders(true);
+    try {
+      const fetchedOrders = await fetchSavedOrders();
+      const fetchedModels = await fetchPhoneModelsApi();
+      setOrders(fetchedOrders);
+      setModels(fetchedModels);
+    } catch (err) {
+      console.error("Erro ao carregar dados do painel administrativo:", err);
+    } finally {
+      setIsLoadingOrders(false);
+    }
   };
 
   useEffect(() => {
-    loadData();
-  }, [userEmail, isAdmin]);
+    if (isAdmin) {
+      loadData();
+    } else if (isLoaded) {
+      setIsLoadingOrders(false);
+    }
+  }, [isAdmin, isLoaded]);
 
   useEffect(() => {
-    if (userEmail && !isAdmin) {
+    if (userEmail && isLoaded && !isAdmin) {
       router.push("/minha-conta");
     }
-  }, [userEmail, isAdmin, router]);
+  }, [userEmail, isAdmin, isLoaded, router]);
 
   // Filtragem por Data
   const filteredOrders = orders.filter((order) => {
@@ -330,6 +342,17 @@ export default function AdminDashboardPage() {
 
   // 1. Tela de Login se não estiver autenticado (sem e-mail e sem admin)
   if (!userEmail && !isAdmin) {
+    if (!isLoaded) {
+      return (
+        <div className="min-h-[85vh] flex items-center justify-center p-4 bg-zinc-50">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-3 border-zinc-950 border-t-transparent rounded-full animate-spin" />
+            <span className="text-xs font-semibold text-zinc-500 font-display">Verificando sessão segura...</span>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-[85vh] flex items-center justify-center p-4 bg-zinc-50">
         <div className="bg-white border border-zinc-200 rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-6 shadow-xl text-zinc-900">
@@ -692,7 +715,17 @@ export default function AdminDashboardPage() {
             </span>
           </div>
 
-          {filteredOrders.length === 0 ? (
+          {isLoadingOrders ? (
+            <div className="p-14 text-center space-y-3 bg-white">
+              <div className="w-8 h-8 border-3 border-zinc-950 border-t-transparent rounded-full animate-spin mx-auto" />
+              <p className="text-sm font-black text-zinc-900 font-display">
+                Carregando pedidos da loja...
+              </p>
+              <p className="text-xs text-zinc-500">
+                Sincronizando fila de produção em tempo real.
+              </p>
+            </div>
+          ) : filteredOrders.length === 0 ? (
             <div className="p-12 text-center space-y-3">
               <div className="w-12 h-12 rounded-full bg-zinc-100 text-zinc-400 flex items-center justify-center mx-auto">
                 <Filter className="w-6 h-6" />

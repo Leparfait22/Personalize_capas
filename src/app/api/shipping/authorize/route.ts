@@ -14,8 +14,18 @@ export async function GET() {
     );
   }
 
-  // Escopos necessários para cotar fretes e gerenciar etiquetas no Melhor Envio
-  const scopes = "shipping-calculate shipping-companies cart-read cart-write";
+  // Escopos necessários para cotar fretes, pagar carrinho, gerar e imprimir etiquetas no Melhor Envio
+  const scopes = [
+    "shipping-calculate",
+    "shipping-companies",
+    "cart-read",
+    "cart-write",
+    "shipping-checkout",
+    "shipping-generate",
+    "shipping-print",
+    "orders-read",
+    "shipping-tracking",
+  ].join(" ");
   const authUrl = `${apiUrl}/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(
     redirectUri
   )}&response_type=code&scope=${encodeURIComponent(scopes)}`;

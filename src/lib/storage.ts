@@ -184,7 +184,9 @@ export async function fetchSavedOrders(params?: { status?: string; query?: strin
     if (params?.query) search.append("query", params.query);
     if (params?.dateFilter) search.append("dateFilter", params.dateFilter);
 
-    const res = await fetch(`/api/orders?${search.toString()}`);
+    const res = await fetch(`/api/orders?${search.toString()}`, {
+      cache: "no-store",
+    });
     if (res.ok) {
       const orders = await res.json();
       return orders;

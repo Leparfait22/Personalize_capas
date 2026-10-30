@@ -3,6 +3,7 @@ import {
   cleanCep,
   isValidCep,
   generateMelhorEnvioLabel,
+  getMelhorEnvioConfig,
 } from "../src/lib/melhor-envio";
 
 async function runShippingTests() {
@@ -80,6 +81,15 @@ async function runShippingTests() {
   assert(
     typeof generateMelhorEnvioLabel === "function",
     "Função generateMelhorEnvioLabel disponível para compra e geração de etiquetas"
+  );
+
+  // Teste 7: Suporte tanto a CNPJ (14 dígitos) quanto CPF (11 dígitos) no remetente da loja
+  const cfg = getMelhorEnvioConfig();
+  const digitsOnly = cfg.fromDocument.replace(/\D/g, "");
+  assert(
+    digitsOnly.length === 11 || digitsOnly.length === 14,
+    "Documento do remetente configurado aceita tanto CPF (11 dígitos) quanto CNPJ (14 dígitos)",
+    `Dígitos atuais: ${digitsOnly.length}`
   );
 
   console.log("\n=======================================================");

@@ -8,6 +8,7 @@ interface AuthContextType {
   userEmail: string | null;
   userName: string | null;
   isAuthModalOpen: boolean;
+  isLoaded: boolean;
   setIsAuthModalOpen: (open: boolean) => void;
   login: (email: string, password?: string) => Promise<{ success: boolean; isAdmin: boolean; error?: string }>;
   register: (name: string, email: string, password: string, role?: "customer" | "admin") => Promise<{ success: boolean; isAdmin: boolean; error?: string }>;
@@ -31,13 +32,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoaded, setIsLoaded] = useState(false);
   const router = useRouter();
 
-  // Carregar status de autenticação via API (/api/auth/me) e fallback localStorage
+  // 1. Ler imediatamente do localStorage para evitar telas de login ou flicker no reload
   useEffect(() => {
+    try {
+      const savedAdmin = localStorage.getItem(ADMIN_STORAGE_KEY);
+      const savedEmail = localStorage.getItem(USER_EMAIL_KEY);
+      const savedName = localStorage.getItem(USER_NAME_KEY);
+      if (savedEmail) {
+        setUserEmail(savedEmail);
+        setIsAdmin(savedAdmin === "true");
+        setUserName(savedName || null);
+      }
+    } catch (e) {
+      // Ignora erro de acesso a storage
+    }
+  }, []);
+
+  // 2. Carregar status de autenticação oficial via API (/api/auth/me)
+  useEffect(() => {
+    let isMounted = true;
     async function checkAuth() {
       try {
-        const res = await fetch("/api/auth/me");
+        const res = await fetch("/api/auth/me", { cache: "no-store" });
         if (res.ok) {
           const data = await res.json();
+          if (!isMounted) return;
           if (data.authenticated) {
             setIsAdmin(Boolean(data.isAdmin));
             setUserEmail(data.userEmail || (data.isAdmin ? "admin@snapcasebr.com" : "cliente@snapcasebr.com"));
@@ -47,26 +66,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (err) {
         console.error("Erro ao verificar sessão na API:", err);
-      }
-
-      // Fallback local
-      try {
-        const savedAdmin = localStorage.getItem(ADMIN_STORAGE_KEY);
-        const savedEmail = localStorage.getItem(USER_EMAIL_KEY);
-        const savedName = localStorage.getItem(USER_NAME_KEY);
-        if (savedEmail) {
-          setUserEmail(savedEmail);
-          setIsAdmin(savedAdmin === "true");
-          setUserName(savedName || null);
-        }
-      } catch (e) {
-        console.error("Erro ao carregar estado de autenticação local:", e);
       } finally {
-        setIsLoaded(true);
+        if (isMounted) {
+          setIsLoaded(true);
+        }
       }
     }
 
     checkAuth();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const login = async (email: string, password?: string) => {
@@ -193,6 +203,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         userEmail,
         userName,
         isAuthModalOpen,
+        isLoaded,
         setIsAuthModalOpen,
         login,
         register,
