@@ -20,7 +20,8 @@ export async function GET(
         .from("orders")
         .select("id, order_number, payment_status, status, shipping_address")
         .or(`id.eq.${orderId},order_number.eq.${orderId}`)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       if (!error && order) {
         const paymentDetails = order.shipping_address?.paymentDetails;
@@ -34,14 +35,26 @@ export async function GET(
             asaasData &&
             (asaasData.status === "CONFIRMED" || asaasData.status === "RECEIVED")
           ) {
+            const updatedShipping = {
+              ...(order.shipping_address || {}),
+              paymentDetails: {
+                ...(paymentDetails || {}),
+                asaasStatus: asaasData.status,
+                paidAt: paymentDetails?.paidAt || new Date().toISOString(),
+              },
+            };
+
+            // Atualização atômica condicional (apenas se ainda estiver pending para evitar race condition com o Webhook)
             await supabase
               .from("orders")
               .update({
                 payment_status: "paid",
                 status: order.status === "pending" ? "in_production" : order.status,
+                shipping_address: updatedShipping,
                 updated_at: new Date().toISOString(),
               })
-              .eq("id", order.id);
+              .eq("id", order.id)
+              .eq("payment_status", "pending");
 
             return NextResponse.json({
               paid: true,
@@ -64,7 +77,8 @@ export async function GET(
                 status: order.status === "pending" ? "in_production" : order.status,
                 updated_at: new Date().toISOString(),
               })
-              .eq("id", order.id);
+              .eq("id", order.id)
+              .eq("payment_status", "pending");
 
             return NextResponse.json({
               paid: true,

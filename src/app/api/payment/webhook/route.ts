@@ -6,6 +6,9 @@ import {
 } from "@/lib/mercadopago";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
+// 🛡️ Cache em memória para idempotência e proteção contra eventos fora de ordem em rajadas
+const processedWebhookOrders = new Map<string, { isPaid: boolean; asaasStatus: string; paidAt?: string }>();
+
 export async function GET() {
   return NextResponse.json({
     status: "ok",
@@ -60,14 +63,41 @@ export async function POST(request: Request) {
         status === "RECEIVED" ||
         status === "CONFIRMED";
 
+      if (orderId) {
+        const memRecord = processedWebhookOrders.get(orderId);
+        if (memRecord?.isPaid && isPaid && memRecord.asaasStatus === status) {
+          return NextResponse.json({ received: true, gateway: "asaas", idempotent: true });
+        }
+        if (memRecord?.isPaid && !isPaid) {
+          return NextResponse.json({ received: true, gateway: "asaas", ignoredOutOfOrder: true });
+        }
+      }
+
       if (orderId && isSupabaseConfigured()) {
         const { data: existingOrder } = await supabase
           .from("orders")
           .select("id, status, payment_status, shipping_address")
           .or(`id.eq.${orderId},order_number.eq.${orderId}`)
-          .single();
+          .limit(1)
+          .maybeSingle();
 
         if (existingOrder) {
+          const prevDetails = existingOrder.shipping_address?.paymentDetails || {};
+
+          // 🛡️ Idempotência: Se o pedido já está pago e o status recebido já foi registrado, ignora regravar
+          if (
+            existingOrder.payment_status === "paid" &&
+            isPaid &&
+            prevDetails.asaasStatus === status
+          ) {
+            return NextResponse.json({ received: true, gateway: "asaas", idempotent: true });
+          }
+
+          // Evita que um webhook antigo (ex: PAYMENT_CREATED / PENDING fora de ordem) sobrescreva um pedido já PAGO
+          if (existingOrder.payment_status === "paid" && !isPaid) {
+            return NextResponse.json({ received: true, gateway: "asaas", ignoredOutOfOrder: true });
+          }
+
           const nextOrderStatus =
             isPaid && existingOrder.status === "pending"
               ? "in_production"
@@ -76,11 +106,11 @@ export async function POST(request: Request) {
           const updatedShippingAddress = {
             ...(existingOrder.shipping_address || {}),
             paymentDetails: {
-              ...(existingOrder.shipping_address?.paymentDetails || {}),
+              ...prevDetails,
               gateway: "asaas",
-              asaasPaymentId: paymentId,
+              asaasPaymentId: paymentId || prevDetails.asaasPaymentId,
               asaasStatus: status,
-              paidAt: isPaid ? new Date().toISOString() : undefined,
+              paidAt: prevDetails.paidAt || (isPaid ? new Date().toISOString() : undefined),
             },
           };
 
@@ -96,6 +126,15 @@ export async function POST(request: Request) {
 
           console.log(`[Asaas Webhook] Pedido ${existingOrder.id} atualizado para: ${isPaid ? "PAID" : status}`);
         }
+      }
+
+      if (orderId) {
+        const prevMem = processedWebhookOrders.get(orderId);
+        processedWebhookOrders.set(orderId, {
+          isPaid: Boolean(prevMem?.isPaid || isPaid),
+          asaasStatus: status || "",
+          paidAt: prevMem?.paidAt || (isPaid ? new Date().toISOString() : undefined),
+        });
       }
 
       return NextResponse.json({ received: true, gateway: "asaas" });

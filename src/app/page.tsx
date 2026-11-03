@@ -162,22 +162,11 @@ export default function Home() {
         }}
       />
 
-      {/* 2. Customizador Principal (Duas Colunas) */}
+      {/* 2. Customizador Principal (Duas Colunas no Desktop / Fluxo 1 -> 2 -> Preview -> Resumo no Mobile) */}
       <section id="customizador" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Coluna Esquerda: Mockup Canvas Interativo (Sticky) */}
-          <div className="lg:col-span-5 lg:sticky lg:top-24 space-y-4">
-            <PhoneMockupCanvas
-              model={selectedModel}
-              finish={selectedFinish}
-              customization={customization}
-              onCustomizationChange={handleCustomizationChange}
-              onExportReady={(fn) => setExportFn(() => fn)}
-            />
-          </div>
-
-          {/* Coluna Direita: Controles e Etapas de Configuração */}
-          <div className="lg:col-span-7 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 lg:grid-rows-[auto_1fr] gap-6 lg:gap-x-8 lg:gap-y-6 items-start">
+          {/* Etapas 1 e 2: Foto e Modelo do Smartphone (Primeiro no Mobile, Direita Superior no Desktop) */}
+          <div className="order-1 lg:col-start-6 lg:col-span-7 lg:row-start-1 space-y-6">
             {/* Etapa 1: Foto e Ajustes */}
             <CustomizerControls
               customization={customization}
@@ -190,8 +179,21 @@ export default function Home() {
               selectedModel={selectedModel}
               onSelectModel={handleSelectModel}
             />
+          </div>
 
-            {/* Resumo de Especificações e Adicionar ao Carrinho */}
+          {/* Mockup Canvas Interativo (Após Etapas 1 e 2 no Mobile, Coluna Esquerda Sticky no Desktop) */}
+          <div className="order-2 lg:col-start-1 lg:col-span-5 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-24 space-y-4">
+            <PhoneMockupCanvas
+              model={selectedModel}
+              finish={selectedFinish}
+              customization={customization}
+              onCustomizationChange={handleCustomizationChange}
+              onExportReady={(fn) => setExportFn(() => fn)}
+            />
+          </div>
+
+          {/* Resumo de Especificações e Adicionar ao Carrinho (Final no Mobile, Direita Inferior no Desktop) */}
+          <div className="order-3 lg:col-start-6 lg:col-span-7 lg:row-start-2">
             <SpecsSummary
               model={selectedModel}
               finish={selectedFinish}

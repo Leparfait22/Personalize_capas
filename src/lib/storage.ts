@@ -303,13 +303,13 @@ export function getSavedOrders(): Order[] {
 export function saveNewOrder(order: Order): void {
   if (typeof window === "undefined") return;
   try {
-    const orders = getSavedOrders();
+    const orders = getSavedOrders().filter((o) => o.id !== order.id);
     const updated = [order, ...orders];
     localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(updated));
   } catch (err) {
     console.warn("QuotaExceededError ao salvar pedido no localStorage. Tentando versão otimizada...", err);
     try {
-      const orders = getSavedOrders();
+      const orders = getSavedOrders().filter((o) => o.id !== order.id);
       const lightweightOrder = {
         ...order,
         items: order.items.map((i) => ({

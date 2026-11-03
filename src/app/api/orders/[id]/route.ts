@@ -14,7 +14,8 @@ export async function GET(
         .from("orders")
         .select("*, order_items(*)")
         .or(`id.eq.${id},order_number.eq.${id}`)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       if (!error && ord) {
         const formattedOrder = {

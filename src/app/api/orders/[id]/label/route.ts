@@ -4,6 +4,9 @@ import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { generateMelhorEnvioLabel } from "@/lib/melhor-envio";
 import { Order } from "@/types";
 
+// 🔒 Trava de concorrência em memória para impedir emissão duplicada simultânea da mesma etiqueta
+const inFlightLabelOrders = new Set<string>();
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -20,6 +23,15 @@ export async function POST(
   const resolvedParams = await params;
   const { id } = resolvedParams;
 
+  if (inFlightLabelOrders.has(id)) {
+    return NextResponse.json(
+      { error: "A etiqueta deste pedido já está sendo gerada neste momento. Aguarde alguns segundos." },
+      { status: 409 }
+    );
+  }
+
+  inFlightLabelOrders.add(id);
+
   try {
     let order: Order | null = null;
 
@@ -29,7 +41,8 @@ export async function POST(
         .from("orders")
         .select("*, order_items(*)")
         .or(`id.eq.${id},order_number.eq.${id}`)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       if (!error && ord) {
         order = {
@@ -106,6 +119,19 @@ export async function POST(
       );
     }
 
+    // 🛡️ Idempotência: Se o pedido já possui etiqueta gerada, retorna os dados existentes sem recomprar no Melhor Envio
+    if (order.labelUrl || order.shipmentId) {
+      return NextResponse.json({
+        success: true,
+        idempotent: true,
+        shipmentId: order.shipmentId,
+        trackingCode: order.trackingCode,
+        labelUrl: order.labelUrl,
+        carrierName: order.shippingMethod?.company || "Transportadora",
+        serviceName: order.shippingMethod?.name || "Envio",
+      });
+    }
+
     // 3. Chamar a API do Melhor Envio para gerar e pagar a etiqueta com o saldo
     const labelResult = await generateMelhorEnvioLabel(order);
 
@@ -151,5 +177,7 @@ export async function POST(
       { error: error.message || "Erro interno ao emitir etiqueta no Melhor Envio." },
       { status: 500 }
     );
+  } finally {
+    inFlightLabelOrders.delete(id);
   }
 }

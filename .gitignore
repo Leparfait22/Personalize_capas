@@ -5,6 +5,8 @@
 
 # testing & test scripts
 /coverage
+/tests
+tests/
 /scripts
 scripts/
 test-*.mjs

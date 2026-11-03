@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
@@ -17,7 +17,7 @@ import {
   isValidEmail,
   detectCardBrand,
 } from "@/lib/utils";
-import { saveNewOrderApi } from "@/lib/storage";
+import { saveNewOrderApi, saveNewOrder } from "@/lib/storage";
 import { Order, ShippingOption, PaymentMethod } from "@/types";
 import {
   Lock,
@@ -40,6 +40,8 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [cepLoading, setCepLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const submittingRef = useRef(false);
+  const draftOrderIdentityRef = useRef<{ id: string; orderNumber: string; createdAt: string } | null>(null);
 
   // Melhor Envio Shipping States
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
@@ -142,6 +144,7 @@ export default function CheckoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current || loading) return;
     setErrorMessage(null);
 
     if (items.length === 0) return;
@@ -192,17 +195,27 @@ export default function CheckoutPage() {
       }
     }
 
+    submittingRef.current = true;
     setLoading(true);
 
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    const orderId = `ord_${Date.now()}`;
-    const orderNumber = `SC-${randomNum}`;
+    // 🛡️ Idempotência: Reutiliza o mesmo ID e número de pedido caso o cliente tente novamente após erro/recusa
+    if (!draftOrderIdentityRef.current) {
+      const timeSuffix = Date.now().toString(36).slice(-3).toUpperCase();
+      const randomNum = Math.floor(100 + Math.random() * 900);
+      draftOrderIdentityRef.current = {
+        id: `ord_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        orderNumber: `SC-${timeSuffix}${randomNum}`,
+        createdAt: new Date().toISOString(),
+      };
+    }
+
+    const { id: orderId, orderNumber, createdAt } = draftOrderIdentityRef.current;
 
     const activeShippingCost = selectedShipping !== null
       ? selectedShipping.finalPrice
       : (subtotal >= 149 || subtotal === 0 ? 0 : defaultShippingCost);
 
-    const discountAmount = paymentMethod === "pix" ? subtotal * 0.05 : 0;
+    const discountAmount = 0;
     const finalTotal = Math.max(0, subtotal + activeShippingCost - discountAmount);
 
     // 🛡️ Sanitização Anti-XSS rigorosa para todos os campos gravados no banco
@@ -241,12 +254,21 @@ export default function CheckoutPage() {
       paymentMethod,
       paymentStatus: "pending",
       status: "pending",
-      createdAt: new Date().toISOString(),
+      createdAt,
       updatedAt: new Date().toISOString(),
     };
 
     try {
-      // 1. Processar Pagamento via API do Asaas
+      // 1. Salvar pedido no Supabase e subir imagens ANTES de cobrar no gateway (evita Race Condition com Webhook e perda de pedido pago)
+      const savedOk = await saveNewOrderApi(newOrder);
+      if (!savedOk) {
+        setErrorMessage("Não foi possível registrar seu pedido. Verifique sua conexão e tente novamente.");
+        submittingRef.current = false;
+        setLoading(false);
+        return;
+      }
+
+      // 2. Processar Pagamento via API do Asaas (com o pedido já existente no banco)
       const payRes = await fetch("/api/payment/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -273,11 +295,12 @@ export default function CheckoutPage() {
           payData.error ||
             "Pagamento não autorizado pelo emissor do cartão. Verifique os dados digitados ou escolha pagar via PIX."
         );
+        submittingRef.current = false;
         setLoading(false);
         return;
       }
 
-      // Anexar detalhes do pagamento (QR Code, ID MP, parcelamento)
+      // Anexar detalhes do pagamento (QR Code, ID Asaas, parcelamento)
       if (payData.paymentDetails) {
         newOrder.paymentDetails = payData.paymentDetails;
       }
@@ -287,13 +310,14 @@ export default function CheckoutPage() {
         newOrder.status = "in_production";
       }
 
-      // 2. Salvar pedido no Supabase e banco de dados
-      await saveNewOrderApi(newOrder);
+      // 3. Sincronizar cache local com os detalhes do pagamento e redirecionar
+      saveNewOrder(newOrder);
       clearCart();
       router.push(`/order-success/${orderId}`);
     } catch (err) {
       console.error("Erro ao processar pedido e pagamento:", err);
       setErrorMessage("Ocorreu um erro ao processar seu pedido. Tente novamente.");
+      submittingRef.current = false;
       setLoading(false);
     }
   };
@@ -321,7 +345,7 @@ export default function CheckoutPage() {
     ? selectedShipping.finalPrice
     : (subtotal >= 149 || subtotal === 0 ? 0 : defaultShippingCost);
 
-  const discountAmount = paymentMethod === "pix" ? subtotal * 0.05 : 0;
+  const discountAmount = 0;
   const finalTotal = Math.max(0, subtotal + activeShippingCost - discountAmount);
 
   const isCPFValid = formData.cpf.replace(/\D/g, "").length === 11 ? isValidCPF(formData.cpf) : null;
@@ -685,9 +709,6 @@ export default function CheckoutPage() {
                       <QrCode className="w-4 h-4 text-emerald-600 shrink-0" />
                       <span>PIX</span>
                     </div>
-                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800">
-                      5% OFF
-                    </span>
                   </div>
                   <p className="text-[11px] text-zinc-600 leading-snug">
                     QR Code e Copia e Cola na hora com aprovação imediata.
@@ -966,13 +987,6 @@ export default function CheckoutPage() {
                     ? "Entrega em 1 dia útil"
                     : `Entrega em até ${selectedShipping.deliveryTime} dias úteis`}
                 </span>
-              </div>
-            )}
-
-            {paymentMethod === "pix" && (
-              <div className="flex justify-between text-emerald-700 font-semibold">
-                <span>Desconto PIX (5%)</span>
-                <span className="font-mono font-bold">- {formatCurrency(subtotal * 0.05)}</span>
               </div>
             )}
 

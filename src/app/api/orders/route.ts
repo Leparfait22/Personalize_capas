@@ -208,6 +208,59 @@ export async function POST(request: Request) {
     const discount = Number((order.discount || 0).toFixed(2));
     order.totalAmount = Number(Math.max(0, order.subtotal + shipping - discount).toFixed(2));
 
+    const existingInMemory = inMemoryOrders.find((o) => o.id === order.id);
+
+    if (isSupabaseConfigured()) {
+      // 🛡️ Idempotência: Verifica se o pedido já existe no banco (ex: retentativa no checkout)
+      const { data: existingOrder } = await supabase
+        .from("orders")
+        .select("id, payment_status, status, shipping_address")
+        .eq("id", order.id)
+        .maybeSingle();
+
+      if (existingOrder) {
+        const mergedPaymentStatus =
+          existingOrder.payment_status === "paid" ? "paid" : order.paymentStatus;
+        const mergedStatus =
+          existingOrder.payment_status === "paid" && existingOrder.status !== "pending"
+            ? existingOrder.status
+            : order.status;
+
+        await supabase
+          .from("orders")
+          .update({
+            customer_name: order.customer.name,
+            customer_email: order.customer.email,
+            customer_whatsapp: order.customer.whatsapp,
+            customer_cpf: order.customer.cpf,
+            shipping_address: {
+              ...(existingOrder.shipping_address || {}),
+              ...order.shippingAddress,
+              shippingMethod: order.shippingMethod || existingOrder.shipping_address?.shippingMethod || null,
+              trackingCode: order.trackingCode || existingOrder.shipping_address?.trackingCode || null,
+              paymentDetails:
+                order.paymentDetails || existingOrder.shipping_address?.paymentDetails || null,
+            },
+            subtotal: order.subtotal,
+            shipping_cost: order.shippingCost,
+            discount: order.discount,
+            total_amount: order.totalAmount,
+            payment_method: order.paymentMethod,
+            payment_status: mergedPaymentStatus,
+            status: mergedStatus,
+            notes: order.notes || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", order.id);
+
+        inMemoryOrders = [order, ...inMemoryOrders.filter((o) => o.id !== order.id)];
+        return NextResponse.json({ success: true, order, idempotent: true });
+      }
+    } else if (existingInMemory) {
+      inMemoryOrders = [order, ...inMemoryOrders.filter((o) => o.id !== order.id)];
+      return NextResponse.json({ success: true, order, idempotent: true });
+    }
+
     // Processar uploads de imagem para o Cloudflare R2 antes de gravar
     for (const item of order.items) {
       // 1. Upload da Foto Original enviada pelo cliente
@@ -312,8 +365,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // Salvar também em memória para fallback gracioso
-    inMemoryOrders = [order, ...inMemoryOrders];
+    // Salvar também em memória para fallback gracioso (sem duplicar ID)
+    inMemoryOrders = [order, ...inMemoryOrders.filter((o) => o.id !== order.id)];
 
     return NextResponse.json({ success: true, order });
   } catch (err) {

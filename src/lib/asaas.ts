@@ -55,7 +55,7 @@ export function getAsaasConfig(): AsaasConfigData {
   let webhookToken = (process.env.ASAAS_WEBHOOK_TOKEN || "").trim();
 
   // Fallback: se o Next.js dev server estiver rodando e ainda não tiver recarregado o .env em memória
-  if (typeof window === "undefined" && !apiKey) {
+  if (typeof window === "undefined" && !apiKey && process.env.ASAAS_FORCE_SIMULATED !== "true") {
     try {
       const fs = require("node:fs");
       const path = require("node:path");
