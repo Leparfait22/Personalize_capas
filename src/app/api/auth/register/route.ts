@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase, createSupabaseAuthClient, isSupabaseConfigured } from "@/lib/supabase";
 
 const ADMIN_COOKIE_NAME = "snapcase_admin_session";
 
@@ -69,9 +69,10 @@ export async function POST(request: Request) {
         }
       }
 
-      // 2. Se não criou via Admin API, tentar via signUp nativo
+      // 2. Se não criou via Admin API, tentar via signUp em cliente isolado (sem contaminar o Service Role global)
       if (!userId) {
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        const authClient = createSupabaseAuthClient();
+        const { data: signUpData, error: signUpError } = await authClient.auth.signUp({
           email: userEmail,
           password: userPassword,
           options: {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase, createSupabaseAuthClient, isSupabaseConfigured } from "@/lib/supabase";
 
 const ADMIN_COOKIE_NAME = "snapcase_admin_session";
 
@@ -31,8 +31,9 @@ export async function POST(request: Request) {
     let isAuthenticated = false;
 
     if (isSupabaseConfigured()) {
-      // 1. Autenticar usando Supabase Auth (auth.users)
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      // 1. Autenticar usando cliente Auth isolado (para não sobrescrever o Service Role no cliente global `supabase`)
+      const authClient = createSupabaseAuthClient();
+      const { data: authData, error: authError } = await authClient.auth.signInWithPassword({
         email: userEmail,
         password: userPassword,
       });

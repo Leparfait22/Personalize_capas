@@ -50,9 +50,6 @@ export default function SpecsSummary({
           <span className="text-2xl font-black text-zinc-950 font-display">
             {formatCurrency(unitPrice)}
           </span>
-          <span className="text-[10px] text-emerald-600 font-bold block">
-            ou até 3x sem juros
-          </span>
         </div>
       </div>
 

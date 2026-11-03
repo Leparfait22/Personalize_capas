@@ -62,6 +62,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUserEmail(data.userEmail || (data.isAdmin ? "admin@snapcasebr.com" : "cliente@snapcasebr.com"));
             setUserName(data.userName || (data.isAdmin ? "Administrador" : "Cliente"));
             return;
+          } else {
+            // Se o cookie HTTP-Only do servidor expirou/não existe, limpa o localStorage órfão
+            setIsAdmin(false);
+            setUserEmail(null);
+            setUserName(null);
+            try {
+              localStorage.removeItem(ADMIN_STORAGE_KEY);
+              localStorage.removeItem(USER_EMAIL_KEY);
+              localStorage.removeItem(USER_NAME_KEY);
+            } catch (e) {}
           }
         }
       } catch (err) {

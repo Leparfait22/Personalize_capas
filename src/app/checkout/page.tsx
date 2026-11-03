@@ -281,7 +281,7 @@ export default function CheckoutPage() {
                   cardHolderName: cardData.name,
                   expiry: cardData.expiry,
                   cvv: cardData.cvv,
-                  installments: Number(cardData.installments) || 1,
+                  installments: 1,
                   isDebit: paymentMethod === "debit_card",
                 }
               : undefined,
@@ -732,12 +732,9 @@ export default function CheckoutPage() {
                       <CreditCard className="w-4 h-4 text-zinc-950 shrink-0" />
                       <span>Crédito</span>
                     </div>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-zinc-200 text-zinc-800">
-                      Até 6x
-                    </span>
                   </div>
                   <p className="text-[11px] text-zinc-600 leading-snug">
-                    Parcelamento sem juros em todos os cartões.
+                    Aprovação imediata em todos os cartões.
                   </p>
                 </div>
               </button>
@@ -758,9 +755,7 @@ export default function CheckoutPage() {
                       <Wallet className="w-4 h-4 text-zinc-950 shrink-0" />
                       <span>Débito</span>
                     </div>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-800">
-                      À vista
-                    </span>
+                    
                   </div>
                   <p className="text-[11px] text-zinc-600 leading-snug">
                     Débito online Visa, Mastercard ou Elo.
@@ -858,41 +853,6 @@ export default function CheckoutPage() {
                     />
                   </div>
                 </div>
-
-                {/* Opções de Parcelamento para Cartão de Crédito */}
-                {paymentMethod === "credit_card" && (
-                  <div>
-                    <label className="block text-zinc-700 font-semibold mb-1">
-                      Opção de Parcelamento
-                    </label>
-                    <select
-                      value={cardData.installments}
-                      onChange={(e) =>
-                        setCardData({ ...cardData, installments: e.target.value })
-                      }
-                      className="w-full bg-white border border-zinc-200 rounded-xl px-3.5 py-2.5 text-zinc-900 focus:outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 transition-all font-medium"
-                    >
-                      <option value="1">
-                        1x de {formatCurrency(finalTotal)} (sem juros)
-                      </option>
-                      <option value="2">
-                        2x de {formatCurrency(finalTotal / 2)} (sem juros)
-                      </option>
-                      <option value="3">
-                        3x de {formatCurrency(finalTotal / 3)} (sem juros)
-                      </option>
-                      <option value="4">
-                        4x de {formatCurrency(finalTotal / 4)} (sem juros)
-                      </option>
-                      <option value="5">
-                        5x de {formatCurrency(finalTotal / 5)} (sem juros)
-                      </option>
-                      <option value="6">
-                        6x de {formatCurrency(finalTotal / 6)} (sem juros)
-                      </option>
-                    </select>
-                  </div>
-                )}
 
                 {/* Informação para Cartão de Débito */}
                 {paymentMethod === "debit_card" && (

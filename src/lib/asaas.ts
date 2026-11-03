@@ -363,8 +363,8 @@ export async function createAsaasCardPayment(
   const cleanNumber = (cardInput.cardNumber || "").replace(/\D/g, "");
   const lastFour = cleanNumber.slice(-4) || "0000";
   const brand = detectCardBrand(cleanNumber);
-  const installments = Math.max(1, Number(cardInput.installments) || 1);
-  const installmentAmount = Number((order.totalAmount / installments).toFixed(2));
+  const installments = 1;
+  const installmentAmount = Number(order.totalAmount.toFixed(2));
 
   // Formatar mês e ano de expiração
   const expiryParts = (cardInput.expiry || "").split("/");

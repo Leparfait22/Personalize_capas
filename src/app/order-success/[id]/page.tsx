@@ -249,7 +249,7 @@ export default function OrderSuccessPage() {
             cardHolderName: cardData.name,
             expiry: cardData.expiry,
             cvv: cardData.cvv,
-            installments: Number(cardData.installments) || 1,
+            installments: 1,
           },
         }),
       });
@@ -358,7 +358,7 @@ export default function OrderSuccessPage() {
           Pedido <strong className="text-zinc-950 font-bold">#{order.orderNumber}</strong>.{" "}
           {isPaid
             ? "Sua capinha personalizada já entrou na nossa esteira de impressão."
-            : "Escolha pagar via PIX (com aprovação imediata) ou Cartão de Crédito para liberar a confecção imediata."}
+            : "Escolha pagar via PIX ou Cartão de Crédito para liberar a confecção imediata."}
         </p>
       </div>
 
@@ -627,23 +627,6 @@ export default function OrderSuccessPage() {
                     className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-3 text-zinc-900 focus:outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 font-mono transition-all text-xs"
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-zinc-700 font-semibold mb-1">
-                  Parcelamento
-                </label>
-                <select
-                  value={cardData.installments}
-                  onChange={(e) =>
-                    setCardData({ ...cardData, installments: e.target.value })
-                  }
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3.5 py-3 text-zinc-900 focus:outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 transition-all text-xs"
-                >
-                  <option value="1">1x de {formatCurrency(order.totalAmount)} (Sem juros)</option>
-                  <option value="2">2x de {formatCurrency(order.totalAmount / 2)} (Sem juros)</option>
-                  <option value="3">3x de {formatCurrency(order.totalAmount / 3)} (Sem juros)</option>
-                </select>
               </div>
 
               <button
