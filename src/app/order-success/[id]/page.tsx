@@ -420,9 +420,7 @@ export default function OrderSuccessPage() {
               >
                 <QrCode className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Pagar com PIX</span>
-                <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-black">
-                  Instantâneo
-                </span>
+                
               </button>
 
               <button
@@ -451,9 +449,7 @@ export default function OrderSuccessPage() {
                     alt="QR Code PIX"
                     className="w-48 h-48 object-contain mx-auto"
                   />
-                  <span className="text-[10px] font-bold text-zinc-400 mt-2 block uppercase tracking-wider">
-                    Pagamento Instantâneo via PIX
-                  </span>
+                
                 </div>
 
                 {/* Instruções e Código Copia e Cola */}
@@ -610,7 +606,7 @@ export default function OrderSuccessPage() {
 
                 <div>
                   <label className="block text-zinc-700 font-semibold mb-1">
-                    Código de Segurança (CVV) *
+                    CVV *
                   </label>
                   <input
                     type="text"

@@ -351,6 +351,37 @@ export async function refreshMelhorEnvioToken(): Promise<string | null> {
 }
 
 /**
+ * Define as dimensões e peso do pacote conforme a quantidade de capinhas:
+ * - 1 capinha: 18x12x2 cm e 100g (0.10 kg) -> Faixa de Envelope / Correios Mini Envios
+ * - 2 capinhas: 18x12x4 cm e 200g (0.20 kg) -> Faixa de Envelope / Correios Mini Envios (respeita máx 4cm e 300g)
+ * - 3+ capinhas: 18x12 cm, altura a partir de 6cm (+2cm por item extra) e 100g por item -> Faixa de Caixa
+ */
+export function getPackageDimensions(itemsCount: number = 1) {
+  const quantity = Math.max(1, itemsCount);
+  const length = 18;
+  const width = 12;
+
+  let height: number;
+  if (quantity === 1) {
+    height = 2;
+  } else if (quantity === 2) {
+    height = 4;
+  } else {
+    height = Math.min(4 + (quantity - 2) * 2, 40);
+  }
+
+  const weight = Math.round(quantity * 0.1 * 100) / 100;
+
+  return {
+    length,
+    width,
+    height,
+    weight,
+    isEnvelopeTier: quantity <= 2,
+  };
+}
+
+/**
  * Calcula frete via API do Melhor Envio ou Fallback
  */
 export async function calculateMelhorEnvioShipping({
@@ -391,12 +422,10 @@ export async function calculateMelhorEnvioShipping({
     };
   }
 
-  // Dimensões do pacote padrão para capinhas de smartphone
-  // Capinha base: 18cm comp x 12cm larg x 4cm alt, 120g
-  // Itens adicionais adicionam 1.5cm de altura e 100g de peso
-  const quantity = Math.max(1, itemsCount);
-  const packageHeight = Math.min(4 + Math.max(0, quantity - 1) * 1.5, 40);
-  const packageWeight = Math.round(Math.max(0.12 * quantity, 0.1) * 100) / 100;
+  // Dimensões do pacote: 1 ou 2 capinhas usam faixa de Envelope (até 4cm e <= 200g); 3+ usam Caixa
+  const pkg = getPackageDimensions(itemsCount);
+  const packageHeight = pkg.height;
+  const packageWeight = pkg.weight;
   const insuranceValue = Math.max(subtotal, 30);
 
   const payload = {
@@ -586,8 +615,9 @@ export async function generateMelhorEnvioLabel(order: Order): Promise<GenerateLa
   const cleanToCep = cleanCep(order.shippingAddress.zipCode);
 
   const totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
-  const packageHeight = Math.min(4 + Math.max(0, totalQuantity - 1) * 1.5, 40);
-  const packageWeight = Math.round(Math.max(0.12 * totalQuantity, 0.1) * 100) / 100;
+  const pkg = getPackageDimensions(totalQuantity);
+  const packageHeight = pkg.height;
+  const packageWeight = pkg.weight;
   const insuranceValue = Math.max(order.subtotal, 30);
 
   const headers = {
