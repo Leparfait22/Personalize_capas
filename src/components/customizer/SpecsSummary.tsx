@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { PhoneModel, CaseFinish, CustomizationConfig } from "@/types";
 import { formatCurrency } from "@/lib/utils";
-import { ShoppingBag, Clock, Shield, Printer, Check, ArrowRight } from "lucide-react";
+import { ShoppingBag, Clock, Printer, Check, ArrowRight } from "lucide-react";
 
 interface SpecsSummaryProps {
   model: PhoneModel;
@@ -57,15 +57,6 @@ export default function SpecsSummary({
       <div className="grid grid-cols-2 gap-3 text-xs">
         <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200/80">
           <span className="text-[11px] text-zinc-500 block mb-0.5">
-            Dimensões do Aparelho
-          </span>
-          <span className="font-bold text-zinc-900">
-            {model.dimensionsMm.width} × {model.dimensionsMm.height} mm
-          </span>
-        </div>
-
-        <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200/80">
-          <span className="text-[11px] text-zinc-500 block mb-0.5">
             Impressão
           </span>
           <span className="font-bold text-zinc-900 flex items-center gap-1">
@@ -81,16 +72,6 @@ export default function SpecsSummary({
           <span className="font-bold text-zinc-900 flex items-center gap-1">
             <Clock className="w-3.5 h-3.5 text-zinc-950" />
             1 a 2 dias úteis
-          </span>
-        </div>
-
-        <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200/80">
-          <span className="text-[11px] text-zinc-500 block mb-0.5">
-            Garantia
-          </span>
-          <span className="font-bold text-zinc-900 flex items-center gap-1">
-            <Shield className="w-3.5 h-3.5 text-emerald-600" />
-            Garantia contra descasques
           </span>
         </div>
       </div>

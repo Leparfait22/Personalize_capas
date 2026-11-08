@@ -1,13 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { Shield, Truck, Printer, Lock, ChevronDown } from "lucide-react";
+import { Shield, Truck, Printer, Lock } from "lucide-react";
 import Logo from "@/components/common/Logo";
 import TrackOrderModal from "@/components/layout/TrackOrderModal";
 
 export default function Footer() {
-  const [openModels, setOpenModels] = useState(false);
-  const [openFinishes, setOpenFinishes] = useState(false);
   const [openTrackModal, setOpenTrackModal] = useState(false);
 
   return (
@@ -66,78 +64,17 @@ export default function Footer() {
       </div>
 
       {/* Rodapé Principal */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid grid-cols-1 md:grid-cols-4 gap-8">
-        {/* Coluna 1: Marca */}
-        <div className="space-y-3 md:col-span-1">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+        {/* Marca */}
+        <div className="space-y-3 max-w-md">
           <Logo variant="dark" size="md" showTagline={true} />
           <p className="text-zinc-600 text-xs leading-relaxed pt-1">
             Seu estúdio especializado em capas de celular personalizadas com impressão fine-art sob medida.
           </p>
         </div>
 
-        {/* Coluna 2: Modelos Populares (Dropdown Sanfona no Mobile) */}
-        <div className="border-b md:border-b-0 border-zinc-100 pb-4 md:pb-0">
-          <button
-            type="button"
-            onClick={() => setOpenModels(!openModels)}
-            className="w-full flex items-center justify-between md:cursor-default font-bold text-zinc-950 text-xs uppercase tracking-wider mb-2 md:mb-3 font-display text-left"
-          >
-            <span>Modelos Populares</span>
-            <ChevronDown
-              className={`w-4 h-4 text-zinc-500 transition-transform duration-200 md:hidden ${
-                openModels ? "rotate-180" : ""
-              }`}
-            />
-          </button>
-          <ul
-            className={`space-y-2 text-xs transition-all duration-200 ${
-              openModels ? "block mt-2" : "hidden md:block"
-            }`}
-          >
-            <li><span className="text-zinc-600 hover:text-zinc-950 cursor-pointer transition-colors">Capas iPhone 16 Pro Max</span></li>
-            <li><span className="text-zinc-600 hover:text-zinc-950 cursor-pointer transition-colors">Capas iPhone 15 e 15 Pro</span></li>
-            <li><span className="text-zinc-600 hover:text-zinc-950 cursor-pointer transition-colors">Capas Samsung Galaxy S24 Ultra</span></li>
-            <li><span className="text-zinc-600 hover:text-zinc-950 cursor-pointer transition-colors">Capas Galaxy A55 / A54 5G</span></li>
-            <li><span className="text-zinc-600 hover:text-zinc-950 cursor-pointer transition-colors">Capas Xiaomi Redmi Note 13</span></li>
-          </ul>
-        </div>
-
-        {/* Coluna 3: Acabamentos (Dropdown Sanfona no Mobile) */}
-        <div className="border-b md:border-b-0 border-zinc-100 pb-4 md:pb-0">
-          <button
-            type="button"
-            onClick={() => setOpenFinishes(!openFinishes)}
-            className="w-full flex items-center justify-between md:cursor-default font-bold text-zinc-950 text-xs uppercase tracking-wider mb-2 md:mb-3 font-display text-left"
-          >
-            <span>Nossos Acabamentos</span>
-            <ChevronDown
-              className={`w-4 h-4 text-zinc-500 transition-transform duration-200 md:hidden ${
-                openFinishes ? "rotate-180" : ""
-              }`}
-            />
-          </button>
-          <ul
-            className={`space-y-2 text-xs transition-all duration-200 ${
-              openFinishes ? "block mt-2" : "hidden md:block"
-            }`}
-          >
-            <li><span className="text-zinc-600 hover:text-zinc-950 cursor-pointer transition-colors">Silicone Anti-Impacto com Airbags</span></li>
-            <li><span className="text-zinc-600 hover:text-zinc-950 cursor-pointer transition-colors">Aveludada Soft Touch Fosca</span></li>
-            <li><span className="text-zinc-600 hover:text-zinc-950 cursor-pointer transition-colors">Transparente Crystal TPU</span></li>
-            <li><span className="text-zinc-600 hover:text-zinc-950 cursor-pointer transition-colors">Black Matte Slim Grip</span></li>
-          </ul>
-        </div>
-
-        {/* Coluna 4: Atendimento & Segurança */}
+        {/* Rastrear Pedido */}
         <div>
-          <h5 className="font-bold text-zinc-950 text-xs uppercase tracking-wider mb-3 font-display">
-            Atendimento ao Cliente
-          </h5>
-          <p className="text-xs text-zinc-600 leading-relaxed mb-3">
-            Segunda a Sexta, das 09h às 18h.<br />
-            Suporte via WhatsApp para dúvidas e arte.
-          </p>
-          
           <button
             type="button"
             onClick={() => setOpenTrackModal(true)}
