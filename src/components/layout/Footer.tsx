@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Shield, Truck, Printer, Lock } from "lucide-react";
+import { Shield, Truck, Printer, Lock, Instagram, Mail, MessageCircle } from "lucide-react";
 import Logo from "@/components/common/Logo";
 import TrackOrderModal from "@/components/layout/TrackOrderModal";
 
@@ -64,7 +64,7 @@ export default function Footer() {
       </div>
 
       {/* Rodapé Principal */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col md:flex-row md:items-start md:justify-between gap-8">
         {/* Marca */}
         <div className="space-y-3 max-w-md">
           <Logo variant="dark" size="md" showTagline={true} />
@@ -73,8 +73,48 @@ export default function Footer() {
           </p>
         </div>
 
+        {/* Contato & Redes Sociais */}
+        <div className="space-y-2.5">
+          <h5 className="font-bold text-zinc-950 text-xs uppercase tracking-wider font-display">
+            Contato
+          </h5>
+          <ul className="space-y-2 text-xs">
+            <li>
+              <a
+                href="https://www.instagram.com/snapcasebrasil"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-zinc-600 hover:text-zinc-950 transition-colors"
+              >
+                <Instagram className="w-4 h-4 text-zinc-900 shrink-0" />
+                <span>@snapcasebrasil</span>
+              </a>
+            </li>
+            <li>
+              <a
+                href="mailto:Contato@studiot.rio"
+                className="inline-flex items-center gap-2 text-zinc-600 hover:text-zinc-950 transition-colors"
+              >
+                <Mail className="w-4 h-4 text-zinc-900 shrink-0" />
+                <span>Contato@studiot.rio</span>
+              </a>
+            </li>
+            <li>
+              <a
+                href="https://wa.me/5521994948282"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-zinc-600 hover:text-zinc-950 transition-colors"
+              >
+                <MessageCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>(21) 99494-8282</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+
         {/* Rastrear Pedido */}
-        <div>
+        <div className="md:self-center">
           <button
             type="button"
             onClick={() => setOpenTrackModal(true)}

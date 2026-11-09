@@ -102,7 +102,7 @@ export default function CustomizerControls({
   return (
     <div className="space-y-5 bg-white p-5 sm:p-6 rounded-2xl border border-zinc-200/90 shadow-[0_4px_20px_rgb(0,0,0,0.03)]">
       {/* 1. Upload de Imagem */}
-      <div>
+      <div id="carregar-foto" className="scroll-mt-32">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-bold text-zinc-950 flex items-center gap-2 font-display">
             <ImageIcon className="w-4 h-4 text-zinc-950" />

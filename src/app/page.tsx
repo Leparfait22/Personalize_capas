@@ -157,13 +157,15 @@ export default function Home() {
       <HeroBanner
         onSelectPreset={handleSelectPreset}
         onStartCustomizing={() => {
-          const el = document.getElementById("customizador");
-          if (el) el.scrollIntoView({ behavior: "smooth" });
+          const el =
+            document.getElementById("carregar-foto") ||
+            document.getElementById("customizador");
+          if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
         }}
       />
 
       {/* 2. Customizador Principal (Duas Colunas no Desktop / Fluxo 1 -> 2 -> Preview -> Resumo no Mobile) */}
-      <section id="customizador" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+      <section id="customizador" className="scroll-mt-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 lg:grid-rows-[auto_1fr] gap-6 lg:gap-x-8 lg:gap-y-6 items-start">
           {/* Etapas 1 e 2: Foto e Modelo do Smartphone (Primeiro no Mobile, Direita Superior no Desktop) */}
           <div className="order-1 lg:col-start-6 lg:col-span-7 lg:row-start-1 space-y-6">

@@ -90,24 +90,28 @@ export default function HeroBanner({
     touchStartX.current = null;
   };
 
+  const scrollToUploadSection = () => {
+    const uploadEl =
+      document.getElementById("carregar-foto") ||
+      document.getElementById("customizador");
+    if (uploadEl) {
+      uploadEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
+
   const handleApplySlide = (slide: ShowcaseSlide) => {
     if (onSelectPreset) {
       onSelectPreset(slide.imageUrl, "Exemplo Personalizado");
     }
-    const customizerEl = document.getElementById("customizador");
-    if (customizerEl) {
-      customizerEl.scrollIntoView({ behavior: "smooth" });
-    }
+    scrollToUploadSection();
   };
 
   const handleCtaClick = () => {
     if (onStartCustomizing) {
       onStartCustomizing();
+      return;
     }
-    const customizerEl = document.getElementById("customizador");
-    if (customizerEl) {
-      customizerEl.scrollIntoView({ behavior: "smooth" });
-    }
+    scrollToUploadSection();
   };
 
   const CtaButton = ({ className = "" }: { className?: string }) => (
