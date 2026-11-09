@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Shield, Truck, Printer, Lock, Instagram, Mail, MessageCircle } from "lucide-react";
+import { Truck, Printer, Lock, Instagram, Mail, MessageCircle } from "lucide-react";
 import Logo from "@/components/common/Logo";
 import TrackOrderModal from "@/components/layout/TrackOrderModal";
 
@@ -10,9 +10,9 @@ export default function Footer() {
 
   return (
     <footer className="bg-white border-t border-zinc-200 text-zinc-600 text-xs">
-      {/* 4 Pilares de Qualidade e Confiança */}
+      {/* Pilares de Qualidade e Confiança */}
       <div className="border-b border-zinc-200 py-10 bg-zinc-50/70">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div className="flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-zinc-950 text-white flex items-center justify-center shrink-0 shadow-sm">
               <Printer className="w-5 h-5 text-white" />
@@ -21,18 +21,6 @@ export default function Footer() {
               <h4 className="font-bold text-zinc-950 text-sm font-display">Impressão UV Ultra-HD</h4>
               <p className="text-zinc-600 text-xs mt-1 leading-relaxed">
                 Tecnologia japonesa de 9 cores com alta definição e fidelidade cromática fotográfica.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-zinc-950 text-white flex items-center justify-center shrink-0 shadow-sm">
-              <Shield className="w-5 h-5 text-emerald-400" />
-            </div>
-            <div>
-              <h4 className="font-bold text-zinc-950 text-sm font-display">Garantia de Qualidade</h4>
-              <p className="text-zinc-600 text-xs mt-1 leading-relaxed">
-                Garantia total contra descasques, desbotamento ou defeitos de fabricação na capinha.
               </p>
             </div>
           </div>
@@ -73,10 +61,10 @@ export default function Footer() {
           </p>
         </div>
 
-        {/* Contato & Redes Sociais */}
+        {/* Atendimento ao Cliente / Contato */}
         <div className="space-y-2.5">
           <h5 className="font-bold text-zinc-950 text-xs uppercase tracking-wider font-display">
-            Contato
+            Atendimento ao Cliente
           </h5>
           <ul className="space-y-2 text-xs">
             <li>
@@ -92,11 +80,11 @@ export default function Footer() {
             </li>
             <li>
               <a
-                href="mailto:Contato@studiot.rio"
+                href="mailto:contato@snapcasebr.com"
                 className="inline-flex items-center gap-2 text-zinc-600 hover:text-zinc-950 transition-colors"
               >
                 <Mail className="w-4 h-4 text-zinc-900 shrink-0" />
-                <span>Contato@studiot.rio</span>
+                <span>contato@snapcasebr.com</span>
               </a>
             </li>
             <li>
@@ -107,7 +95,7 @@ export default function Footer() {
                 className="inline-flex items-center gap-2 text-zinc-600 hover:text-zinc-950 transition-colors"
               >
                 <MessageCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>(21) 99494-8282</span>
+                <span>Whatsapp</span>
               </a>
             </li>
           </ul>

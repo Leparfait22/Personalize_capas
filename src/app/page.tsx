@@ -25,7 +25,10 @@ export default function Home() {
 
   // Modelos disponíveis (carregados dinamicamente do Supabase/localStorage)
   const [models, setModels] = useState<PhoneModel[]>(INITIAL_PHONE_MODELS);
-  const [selectedModel, setSelectedModel] = useState<PhoneModel>(INITIAL_PHONE_MODELS[0]);
+  const [selectedModel, setSelectedModel] = useState<PhoneModel>(() => ({
+    ...INITIAL_PHONE_MODELS[0],
+    cameraModule: getEnrichedCameraModule(INITIAL_PHONE_MODELS[0]),
+  }));
   const [selectedFinish, setSelectedFinish] = useState<CaseFinish>(CASE_FINISHES[0]);
 
   useEffect(() => {
@@ -164,27 +167,19 @@ export default function Home() {
         }}
       />
 
-      {/* 2. Customizador Principal (Duas Colunas no Desktop / Fluxo 1 -> 2 -> Preview -> Resumo no Mobile) */}
+      {/* 2. Customizador Principal (Duas Colunas no Desktop / Fluxo 1: Foto -> Preview -> 2: Modelo -> Resumo no Mobile) */}
       <section id="customizador" className="scroll-mt-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-        <div className="grid grid-cols-1 lg:grid-cols-12 lg:grid-rows-[auto_1fr] gap-6 lg:gap-x-8 lg:gap-y-6 items-start">
-          {/* Etapas 1 e 2: Foto e Modelo do Smartphone (Primeiro no Mobile, Direita Superior no Desktop) */}
-          <div className="order-1 lg:col-start-6 lg:col-span-7 lg:row-start-1 space-y-6">
-            {/* Etapa 1: Foto e Ajustes */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 lg:grid-rows-[auto_auto_1fr] gap-6 lg:gap-x-8 lg:gap-y-6 items-start">
+          {/* Etapa 1: Foto e Ajustes (1º no Mobile, Direita Superior no Desktop) */}
+          <div className="order-1 lg:col-start-6 lg:col-span-7 lg:row-start-1">
             <CustomizerControls
               customization={customization}
               onChange={handleCustomizationChange}
             />
-
-            {/* Etapa 2: Modelo do Smartphone */}
-            <ModelSelector
-              models={models}
-              selectedModel={selectedModel}
-              onSelectModel={handleSelectModel}
-            />
           </div>
 
-          {/* Mockup Canvas Interativo (Após Etapas 1 e 2 no Mobile, Coluna Esquerda Sticky no Desktop) */}
-          <div className="order-2 lg:col-start-1 lg:col-span-5 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-24 space-y-4">
+          {/* Mockup Canvas Interativo / Preview (2º no Mobile logo após o upload da foto, Coluna Esquerda Sticky no Desktop) */}
+          <div className="order-2 lg:col-start-1 lg:col-span-5 lg:row-start-1 lg:row-span-3 lg:sticky lg:top-24 space-y-4">
             <PhoneMockupCanvas
               model={selectedModel}
               finish={selectedFinish}
@@ -194,8 +189,17 @@ export default function Home() {
             />
           </div>
 
-          {/* Resumo de Especificações e Adicionar ao Carrinho (Final no Mobile, Direita Inferior no Desktop) */}
+          {/* Etapa 2: Modelo do Smartphone (3º no Mobile logo abaixo do Preview, Direita Meio no Desktop) */}
           <div className="order-3 lg:col-start-6 lg:col-span-7 lg:row-start-2">
+            <ModelSelector
+              models={models}
+              selectedModel={selectedModel}
+              onSelectModel={handleSelectModel}
+            />
+          </div>
+
+          {/* Resumo de Especificações e Adicionar ao Carrinho (4º no Mobile, Direita Inferior no Desktop) */}
+          <div className="order-4 lg:col-start-6 lg:col-span-7 lg:row-start-3">
             <SpecsSummary
               model={selectedModel}
               finish={selectedFinish}
@@ -241,7 +245,7 @@ export default function Home() {
               Impressão Fine Art UV Ultra-HD
             </h3>
             <p className="text-xs text-zinc-600 leading-relaxed">
-              Nossa equipe processa seu arquivo em alta resolução e imprime diretamente na capinha com tintas flexíveis que não descascam.
+              Nossa equipe processa seu arquivo em alta resolução e imprime diretamente na capinha com fidelidade fotográfica.
             </p>
           </div>
 
@@ -274,22 +278,14 @@ export default function Home() {
               Utilizamos polímeros premium com certificação contra quedas e agentes anti-amarelamento. Cada capa possui relevo especial ao redor da câmera e da tela para evitar contato direto com superfícies duras.
             </p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 pt-8 border-t border-zinc-800">
+            <div className="grid grid-cols-2 gap-4 mt-8 pt-8 border-t border-zinc-800 max-w-md">
               <div>
                 <span className="text-2xl font-black text-white font-display">2.0m</span>
                 <p className="text-[11px] text-zinc-400 mt-0.5">Teste de Queda</p>
               </div>
               <div>
-                <span className="text-2xl font-black text-emerald-400 font-display">100%</span>
-                <p className="text-[11px] text-zinc-400 mt-0.5">Sem Descascar</p>
-              </div>
-              <div>
                 <span className="text-2xl font-black text-white font-display">9 Cores</span>
                 <p className="text-[11px] text-zinc-400 mt-0.5">Fidelidade UV</p>
-              </div>
-              <div>
-                <span className="text-2xl font-black text-white font-display">100%</span>
-                <p className="text-[11px] text-zinc-400 mt-0.5">Garantia Total</p>
               </div>
             </div>
           </div>
@@ -297,7 +293,7 @@ export default function Home() {
       </section>
 
       {/* 5. Seção de Perguntas Frequentes (FAQ) */}
-      <section id="garantia" className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <section id="duvidas" className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-8">
           <span className="text-xs uppercase font-bold text-zinc-500 tracking-wider">
             Tire Suas Dúvidas
@@ -309,10 +305,6 @@ export default function Home() {
 
         <div className="space-y-3">
           {[
-            {
-              q: "A foto na capinha desbota ou descasca com o tempo?",
-              a: "Não! A nossa impressão é realizada com tecnologia UV direta com secagem instantânea por luz ultravioleta, penetrando microscopicamente no substrato da capa. Oferecemos garantia total contra qualquer defeito de fabricação ou descasque.",
-            },
             {
               q: "Como sei se a minha foto vai ficar com boa qualidade?",
               a: "Nosso customizador conta com um indicador inteligente de resolução em tempo real. Se sua foto for muito pequena ou tiver baixa definição, o sistema alertará na tela com orientações.",

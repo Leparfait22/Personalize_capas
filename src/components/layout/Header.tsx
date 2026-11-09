@@ -37,8 +37,8 @@ export default function Header() {
             <a href="#materiais" className="hover:text-zinc-950 transition-colors">
               Nossos Materiais
             </a>
-            <a href="#garantia" className="hover:text-zinc-950 transition-colors">
-              Garantia de Qualidade
+            <a href="#duvidas" className="hover:text-zinc-950 transition-colors">
+              Dúvidas Frequentes
             </a>
           </nav>
 

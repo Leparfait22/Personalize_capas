@@ -556,7 +556,7 @@ export default function MinhaContaPage() {
                                 Capinha Personalizada - {item.model?.name}
                               </p>
                               <p className="text-[11px] text-zinc-500">
-                                Acabamento: <span className="font-semibold text-zinc-700">{item.finish?.name}</span> · Qtd: {item.quantity}x
+                                Qtd: {item.quantity}x
                               </p>
                             </div>
                           </div>

@@ -225,9 +225,6 @@ export default function ModelSelector({
           Modelo selecionado:{" "}
           <strong className="text-zinc-950 font-bold">{selectedModel.name}</strong>
         </span>
-        <span className="text-zinc-500 font-mono text-[11px]">
-          {selectedModel.dimensionsMm.width} × {selectedModel.dimensionsMm.height} mm
-        </span>
       </div>
     </div>
   );

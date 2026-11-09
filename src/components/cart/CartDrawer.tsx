@@ -111,7 +111,7 @@ export default function CartDrawer() {
                     Seu carrinho está vazio
                   </p>
                   <p className="text-xs text-zinc-500 max-w-xs">
-                    Suba uma foto e monte a sua capinha personalizada com acabamento premium!
+                    Suba uma foto e monte a sua capinha personalizada!
                   </p>
                 </div>
                 <button
@@ -150,25 +150,6 @@ export default function CartDrawer() {
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
-                      </div>
-
-                      <p className="text-[11px] text-zinc-500 mt-0.5 line-clamp-1">
-                        {item.finish.name}
-                      </p>
-
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <span
-                          className="w-2.5 h-2.5 rounded-full border border-zinc-300"
-                          style={{
-                            backgroundColor:
-                              item.caseColor === "transparent"
-                                ? "#ffffff"
-                                : item.caseColor,
-                          }}
-                        />
-                        <span className="text-[10px] text-zinc-500">
-                          {item.caseColor === "transparent" ? "Transparente" : "Base Colorida"}
-                        </span>
                       </div>
                     </div>
 

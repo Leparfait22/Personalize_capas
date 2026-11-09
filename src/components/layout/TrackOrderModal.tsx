@@ -258,7 +258,6 @@ export default function TrackOrderModal({ isOpen, onClose }: TrackOrderModalProp
                             </div>
                             <div className="flex-1 overflow-hidden">
                               <h5 className="font-bold text-zinc-950 truncate">{item.model.name}</h5>
-                              <p className="text-[11px] text-zinc-500 truncate">{item.finish.name}</p>
                             </div>
                             <span className="font-mono text-xs font-bold text-zinc-900">
                               Qtd: {item.quantity}

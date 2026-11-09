@@ -751,7 +751,6 @@ export default function OrderSuccessPage() {
                   <p className="font-bold text-zinc-950 truncate font-display">
                     {item.model?.name}
                   </p>
-                  <p className="text-zinc-500 text-[11px]">{item.finish?.name}</p>
                   <span className="text-zinc-500 text-[11px] block mt-0.5">
                     Qtd: {item.quantity} · {formatCurrency(item.totalPrice)}
                   </span>

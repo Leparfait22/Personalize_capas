@@ -911,9 +911,6 @@ export default function CheckoutPage() {
                   <h4 className="text-xs font-bold text-zinc-950 truncate font-display">
                     {item.model.name}
                   </h4>
-                  <p className="text-[11px] text-zinc-500 truncate">
-                    {item.finish.name}
-                  </p>
                   <span className="text-[11px] text-zinc-500 block mt-0.5">
                     Qtd: {item.quantity} × {formatCurrency(item.unitPrice)}
                   </span>
@@ -956,16 +953,6 @@ export default function CheckoutPage() {
                 {formatCurrency(finalTotal)}
               </span>
             </div>
-          </div>
-
-          <div className="p-3.5 bg-zinc-50 rounded-xl border border-zinc-200 text-[11px] text-zinc-600 space-y-1.5">
-            <div className="flex items-center gap-1.5 text-zinc-950 font-bold">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              Garantia de Satisfação
-            </div>
-            <p>
-              Caso a capinha chegue com qualquer defeito na estampa ou encaixe, refazemos sem custo.
-            </p>
           </div>
         </div>
       </div>
