@@ -32,7 +32,7 @@ export default function Footer() {
             <div>
               <h4 className="font-bold text-zinc-950 text-sm font-display">Envio para Todo o Brasil</h4>
               <p className="text-zinc-600 text-xs mt-1 leading-relaxed">
-                Produção rápida em 1 a 2 dias úteis e código de rastreamento enviado via WhatsApp.
+                Produção rápida em 1 a 2 dias úteis
               </p>
             </div>
           </div>
