@@ -257,7 +257,7 @@ export default function Home() {
               Envio Rápido & Rastreamento
             </h3>
             <p className="text-xs text-zinc-600 leading-relaxed">
-              Sua capa é higienizada, embalada com carinho e despachada para o seu endereço com código de rastreio direto no WhatsApp.
+              Sua capa é higienizada, embalada com carinho e despachada para o seu endereço com código de rastreio enviado direto para o seu e-mail.
             </p>
           </div>
         </div>
@@ -311,7 +311,7 @@ export default function Home() {
             },
             {
               q: "Qual é o prazo de confecção e entrega?",
-              a: "A confecção é expressa: de 1 a 1 dias úteis para impressão e inspeção de qualidade.",
+              a: "A confecção é expressa: de 1 a 2 dias úteis para impressão e inspeção de qualidade. Após despachado, você recebe o código de rastreamento no seu e-mail para acompanhar a entrega.",
             },
           ].map((faq, index) => {
             const isOpen = openFaq === index;
