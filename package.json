@@ -12,7 +12,8 @@
     "test:shipping": "npx tsx tests/melhor-envio.test.ts",
     "test:security": "npx tsx tests/security-audit.test.ts",
     "test:auth": "npx tsx tests/auth-attacks.test.ts",
-    "test:concurrency": "npx tsx tests/fixes-and-concurrency.test.ts"
+    "test:concurrency": "npx tsx tests/fixes-and-concurrency.test.ts",
+    "test:email": "npx tsx tests/email-tracking.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1123.0",
@@ -23,6 +24,7 @@
     "lucide-react": "^0.475.0",
     "mercadopago": "^3.6.1",
     "next": "^15.1.7",
+    "nodemailer": "^10.5.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwind-merge": "^3.0.1"
@@ -30,6 +32,7 @@
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.5.4",

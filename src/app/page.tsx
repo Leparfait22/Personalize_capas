@@ -311,7 +311,7 @@ export default function Home() {
             },
             {
               q: "Qual é o prazo de confecção e entrega?",
-              a: "A confecção é expressa: de 1 a 2 dias úteis para impressão e inspeção de qualidade. Após despachado, você recebe o código de rastreamento no WhatsApp para acompanhar a entrega.",
+              a: "A confecção é expressa: de 1 a 1 dias úteis para impressão e inspeção de qualidade.",
             },
           ].map((faq, index) => {
             const isOpen = openFaq === index;

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isServerAdmin } from "@/lib/auth-server";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { generateMelhorEnvioLabel } from "@/lib/melhor-envio";
+import { sendTrackingEmail } from "@/lib/email";
 import { Order } from "@/types";
 
 // 🔒 Trava de concorrência em memória para impedir emissão duplicada simultânea da mesma etiqueta
@@ -142,13 +143,35 @@ export async function POST(
       );
     }
 
-    // 3. Atualizar o pedido no banco de dados com a nova etiqueta e código de rastreio
+    // 4. Disparar e-mail de rastreamento via SMTP (Nodemailer) se houver código de rastreio
+    let emailNotification: { sent: boolean; simulated?: boolean; error?: string } = { sent: false };
+    if (labelResult.trackingCode && order.customer?.email) {
+      emailNotification = await sendTrackingEmail({
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        customerName: order.customer.name,
+        customerEmail: order.customer.email,
+        trackingCode: labelResult.trackingCode,
+        carrierName: labelResult.carrierName,
+        serviceName: labelResult.serviceName,
+        items: order.items.map((item) => ({
+          modelName: item.model.name,
+          quantity: item.quantity,
+        })),
+        shippingAddress: order.shippingAddress,
+      });
+    }
+
+    // 5. Atualizar o pedido no banco de dados com a nova etiqueta e código de rastreio
     if (isSupabaseConfigured()) {
       const updatedShippingAddress = {
         ...order.shippingAddress,
         trackingCode: labelResult.trackingCode,
         labelUrl: labelResult.labelUrl,
         shipmentId: labelResult.shipmentId,
+        ...(emailNotification.sent
+          ? { trackingEmailSentAt: new Date().toISOString() }
+          : {}),
       };
 
       await supabase
@@ -170,6 +193,8 @@ export async function POST(
       serviceName: labelResult.serviceName,
       isSandbox: labelResult.isSandbox,
       price: labelResult.price,
+      emailSent: emailNotification.sent,
+      emailSimulated: emailNotification.simulated,
     });
   } catch (error: any) {
     console.error("Erro na emissão de etiqueta:", error);
