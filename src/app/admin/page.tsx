@@ -218,13 +218,54 @@ export default function AdminDashboardPage() {
     await loadData();
   };
 
-  const handleDownloadImage = (url: string, filename: string) => {
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${filename}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownloadImage = async (url: string, filename: string) => {
+    if (!url) return;
+
+    const cleanName = filename.replace(/\.(png|jpe?g|webp)$/i, "");
+
+    // Se já for data:image/... ou blob:..., o navegador baixa diretamente no mesmo domínio
+    if (url.startsWith("data:") || url.startsWith("blob:")) {
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${cleanName}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+
+    try {
+      // Usa a rota protegida do servidor (Admin + Whitelist Anti-SSRF) para contornar CORS do R2 e forçar download
+      const downloadEndpoint = `/api/admin/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(cleanName)}`;
+      const res = await fetch(downloadEndpoint);
+
+      if (!res.ok) {
+        throw new Error(`Falha no download (HTTP ${res.status})`);
+      }
+
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const ext = blob.type.includes("jpeg") ? "jpg" : blob.type.includes("webp") ? "webp" : "png";
+
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `${cleanName}.${ext}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+    } catch (err) {
+      console.error("Erro ao baixar imagem via servidor:", err);
+      // Fallback via navegação direta para o endpoint com Content-Disposition: attachment
+      const downloadEndpoint = `/api/admin/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(cleanName)}`;
+      const link = document.createElement("a");
+      link.href = downloadEndpoint;
+      link.download = `${cleanName}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   const handleDeleteModel = async (modelId: string) => {
@@ -1047,7 +1088,7 @@ export default function AdminDashboardPage() {
                               className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 bg-zinc-950 hover:bg-zinc-800 text-white rounded-lg text-xs font-bold shadow-md shadow-zinc-950/20 transition-all hover:scale-105 active:scale-95"
                             >
                               <Download className="w-3.5 h-3.5" />
-                              Baixar Arte (300 DPI)
+                              Baixar Arte
                             </button>
                           </div>
                         </div>
@@ -1118,7 +1159,7 @@ export default function AdminDashboardPage() {
                 className="px-4 py-2 bg-zinc-950 hover:bg-zinc-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-zinc-950/20"
               >
                 <Download className="w-3.5 h-3.5" />
-                Baixar Arte Pronta (300 DPI)
+                Baixar Arte Pronta 
               </button>
             </div>
           </div>
