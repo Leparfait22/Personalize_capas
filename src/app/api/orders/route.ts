@@ -6,6 +6,7 @@ import { getServerSession } from "@/lib/auth-server";
 import { uploadImageToStorage } from "@/lib/r2";
 import { INITIAL_PHONE_MODELS, CASE_FINISHES } from "@/data/catalog";
 import { sanitizeInput } from "@/lib/utils";
+import { logger } from "@/lib/logger";
 
 // Forçar execução dinâmica e desativar cache em rota de pedidos
 export const dynamic = "force-dynamic";
@@ -338,6 +339,12 @@ export async function POST(request: Request) {
 
       if (orderError) {
         console.error("Erro ao salvar pedido no Supabase:", orderError);
+        logger.error("ORDER", `Falha ao salvar pedido #${order.orderNumber} no Supabase`, {
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          customerEmail: order.customer.email,
+          dbError: orderError.message,
+        });
         return NextResponse.json({ error: orderError.message }, { status: 500 });
       }
 
@@ -368,9 +375,19 @@ export async function POST(request: Request) {
     // Salvar também em memória para fallback gracioso (sem duplicar ID)
     inMemoryOrders = [order, ...inMemoryOrders.filter((o) => o.id !== order.id)];
 
+    logger.info("ORDER", `Novo pedido #${order.orderNumber} criado com sucesso`, {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      customerEmail: order.customer.email,
+      totalAmount: order.totalAmount,
+      itemsCount: order.items.length,
+      paymentMethod: order.paymentMethod,
+    });
+
     return NextResponse.json({ success: true, order });
-  } catch (err) {
+  } catch (err: any) {
     console.error("Erro no processamento do pedido:", err);
+    logger.error("ORDER", "Erro inesperado ao criar pedido", { error: err });
     return NextResponse.json({ error: "Erro ao criar pedido" }, { status: 500 });
   }
 }

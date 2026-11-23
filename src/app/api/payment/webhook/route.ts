@@ -5,6 +5,7 @@ import {
   validateWebhookSignature,
 } from "@/lib/mercadopago";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { logger } from "@/lib/logger";
 
 // 🛡️ Cache em memória para idempotência e proteção contra eventos fora de ordem em rajadas
 const processedWebhookOrders = new Map<string, { isPaid: boolean; asaasStatus: string; paidAt?: string }>();
@@ -46,6 +47,10 @@ export async function POST(request: Request) {
     if (body?.event || asaasTokenHeader || body?.payment) {
       if (!validateAsaasWebhookToken(asaasTokenHeader)) {
         console.warn("Assinatura de Webhook do Asaas inválida.");
+        logger.warn("SECURITY", "Tentativa de Webhook Asaas com token inválido bloqueada", {
+          event: body?.event,
+          orderId: body?.payment?.externalReference,
+        });
         return NextResponse.json({ error: "Token de webhook do Asaas inválido." }, { status: 401 });
       }
 
@@ -56,6 +61,12 @@ export async function POST(request: Request) {
       const status = payment?.status; // RECEIVED, CONFIRMED, PENDING, OVERDUE, REFUNDED
 
       console.log(`[Asaas Webhook] Evento: ${event} | Pagamento ID: ${paymentId} | Status: ${status} | Pedido: ${orderId}`);
+      logger.info("WEBHOOK", `Evento Asaas recebido: ${event}`, {
+        event,
+        paymentId,
+        status,
+        orderId,
+      });
 
       const isPaid =
         event === "PAYMENT_RECEIVED" ||

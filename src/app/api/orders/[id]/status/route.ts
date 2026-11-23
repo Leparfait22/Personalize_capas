@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { isServerAdmin } from "@/lib/auth-server";
 import { sendTrackingEmail } from "@/lib/email";
+import { logger } from "@/lib/logger";
 
 export async function PATCH(
   request: Request,
@@ -41,8 +42,19 @@ export async function PATCH(
 
       if (error) {
         console.error("Erro ao atualizar status do pedido no Supabase:", error);
+        logger.error("ORDER", `Falha ao atualizar status do pedido ${id}`, {
+          orderId: id,
+          status,
+          dbError: error.message,
+        });
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
+
+      logger.info("ORDER", `Status do pedido ${id} atualizado pelo Admin`, {
+        orderId: id,
+        newStatus: status,
+        paymentStatus,
+      });
 
       // Se o status mudou para "shipped" (Enviado), envia o e-mail de rastreamento caso ainda não tenha sido enviado
       if (status === "shipped") {

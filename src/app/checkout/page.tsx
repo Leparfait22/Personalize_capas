@@ -669,7 +669,7 @@ export default function CheckoutPage() {
                   <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-800 text-xs">
                     <Sparkles className="w-4 h-4 shrink-0 text-emerald-600" />
                     <span>
-                      <strong>Frete Grátis ativado!</strong> Você atingiu a meta de R$ 149,00 e o frete mais econômico é por nossa conta.
+                      <strong>Frete Grátis por nossa conta!</strong>
                     </span>
                   </div>
                 )}

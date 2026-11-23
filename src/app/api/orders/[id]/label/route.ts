@@ -3,6 +3,7 @@ import { isServerAdmin } from "@/lib/auth-server";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { generateMelhorEnvioLabel } from "@/lib/melhor-envio";
 import { sendTrackingEmail } from "@/lib/email";
+import { logger } from "@/lib/logger";
 import { Order } from "@/types";
 
 // 🔒 Trava de concorrência em memória para impedir emissão duplicada simultânea da mesma etiqueta
@@ -137,11 +138,25 @@ export async function POST(
     const labelResult = await generateMelhorEnvioLabel(order);
 
     if (!labelResult.success) {
+      logger.error("SHIPPING", `Falha ao emitir etiqueta no Melhor Envio para o pedido #${order.orderNumber}`, {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        reason: labelResult.error,
+      });
       return NextResponse.json(
         { error: labelResult.error || "Não foi possível gerar a etiqueta no Melhor Envio." },
         { status: 500 }
       );
     }
+
+    logger.info("SHIPPING", `Etiqueta Melhor Envio emitida com sucesso para o pedido #${order.orderNumber}`, {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      shipmentId: labelResult.shipmentId,
+      trackingCode: labelResult.trackingCode,
+      carrierName: labelResult.carrierName,
+      price: labelResult.price,
+    });
 
     // 4. Disparar e-mail de rastreamento via SMTP (Nodemailer) se houver código de rastreio
     let emailNotification: { sent: boolean; simulated?: boolean; error?: string } = { sent: false };
@@ -198,6 +213,7 @@ export async function POST(
     });
   } catch (error: any) {
     console.error("Erro na emissão de etiqueta:", error);
+    logger.error("SHIPPING", `Erro interno na emissão de etiqueta (Pedido ID: ${id})`, { error });
     return NextResponse.json(
       { error: error.message || "Erro interno ao emitir etiqueta no Melhor Envio." },
       { status: 500 }

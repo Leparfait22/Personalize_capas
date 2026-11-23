@@ -6,6 +6,7 @@ import {
   createAsaasCardPayment,
   CardPaymentInput,
 } from "@/lib/asaas";
+import { logger } from "@/lib/logger";
 
 // 🔒 Trava de concorrência em memória para evitar cobranças duplicadas simultâneas no mesmo pedido
 const inFlightPaymentRequests = new Map<string, Promise<any>>();
@@ -151,10 +152,23 @@ export async function POST(request: Request) {
         };
 
         if (pixResult.success) {
+          logger.info("PAYMENT", `Cobrança PIX gerada para o pedido #${order.orderNumber}`, {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            paymentId: pixResult.paymentId,
+            totalAmount: order.totalAmount,
+            isSimulated: pixResult.isSimulated,
+          });
           processedPaymentsMemory.set(order.id, {
             paymentStatus: "pending",
             totalAmount: order.totalAmount,
             pixDetails: paymentDetails,
+          });
+        } else {
+          logger.error("PAYMENT", `Falha ao gerar cobrança PIX no pedido #${order.orderNumber}`, {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            reason: pixResult.error || pixResult.statusDetail,
           });
         }
 
@@ -224,11 +238,26 @@ export async function POST(request: Request) {
         };
 
         if (cardResult.status === "approved") {
+          logger.info("PAYMENT", `Pagamento via Cartão APROVADO no pedido #${order.orderNumber}`, {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            paymentId: cardResult.paymentId,
+            totalAmount: order.totalAmount,
+            cardBrand: cardResult.cardBrand,
+            cardLastFour: cardResult.cardLastFour,
+          });
           processedPaymentsMemory.set(order.id, {
             paymentStatus: "paid",
             totalAmount: order.totalAmount,
             cardDetails: cardPaymentDetails,
             pixDetails: memState?.pixDetails,
+          });
+        } else {
+          logger.warn("PAYMENT", `Pagamento via Cartão RECUSADO/FALHOU no pedido #${order.orderNumber}`, {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            status: cardResult.status,
+            reason: cardResult.error || cardResult.statusDetail,
           });
         }
 
@@ -287,6 +316,7 @@ export async function POST(request: Request) {
     }
   } catch (err: any) {
     console.error("Erro na rota /api/payment/create:", err);
+    logger.error("PAYMENT", "Erro interno na rota /api/payment/create", { error: err });
     return NextResponse.json(
       { error: "Erro interno ao processar pagamento.", details: err?.message },
       { status: 500 }

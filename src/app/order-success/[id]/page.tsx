@@ -667,20 +667,6 @@ export default function OrderSuccessPage() {
             Seu pagamento de <strong>{formatCurrency(order.totalAmount)}</strong> foi confirmado. 
             Sua capa personalizada já foi encaminhada para a fila de produção e impressão em alta resolução.
           </p>
-
-          {order.paymentDetails?.ticketUrl && (
-            <div className="pt-1">
-              <a
-                href={order.paymentDetails.ticketUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs text-emerald-700 hover:text-emerald-900 font-semibold underline"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                <span>Visualizar comprovante oficial</span>
-              </a>
-            </div>
-          )}
         </div>
       )}
 

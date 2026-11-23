@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { supabase, createSupabaseAuthClient, isSupabaseConfigured } from "@/lib/supabase";
+import { logger } from "@/lib/logger";
 
 const ADMIN_COOKIE_NAME = "snapcase_admin_session";
 
@@ -106,11 +107,17 @@ export async function POST(request: Request) {
     }
 
     if (!isAuthenticated) {
+      logger.warn("AUTH", `Tentativa de login falhou para ${userEmail}`, { email: userEmail });
       return NextResponse.json(
         { error: "E-mail ou Senha Incorretos." },
         { status: 401 }
       );
     }
+
+    logger.info("AUTH", `Login realizado com sucesso: ${userEmail}`, {
+      email: userEmail,
+      isAdmin,
+    });
 
     try {
       const cookieStore = await cookies();

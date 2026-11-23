@@ -177,9 +177,6 @@ export async function GET(request: Request) {
           <div class="quote-box">
             <strong style="font-size: 13px; color: #09090b;">📦 Cotação de Teste em Tempo Real (CEP 01310-100):</strong>
             <ul>${optionsListHtml}</ul>
-            <div style="margin-top: 10px; font-size: 11px; color: #71717a;">
-              Origem da cotação: <strong>${testResult.isFallback ? "Simulação de Contingência" : "API Oficial do Melhor Envio (Sandbox)"}</strong>
-            </div>
           </div>
 
           <a href="/checkout" class="btn">Testar no Checkout da Loja &rarr;</a>

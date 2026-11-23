@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { logger } from "@/lib/logger";
 
 export interface TrackingEmailPayload {
   orderId: string;
@@ -272,9 +273,22 @@ export async function sendTrackingEmail(
       }
     }
 
+    logger.info("EMAIL", `E-mail de rastreamento enviado para ${recipient} (Pedido #${cleanSubjectOrder})`, {
+      orderId: payload.orderId,
+      orderNumber: cleanSubjectOrder,
+      recipient,
+      trackingCode: payload.trackingCode,
+    });
+
     return { sent: true };
   } catch (err: any) {
     console.error("Erro ao enviar e-mail de rastreamento via SMTP:", err);
+    logger.error("EMAIL", `Falha ao enviar e-mail de rastreamento para ${recipient} (Pedido #${payload.orderNumber})`, {
+      orderId: payload.orderId,
+      orderNumber: payload.orderNumber,
+      recipient,
+      error: err,
+    });
     return {
       sent: false,
       error: err?.message || "Falha ao enviar e-mail via SMTP.",
