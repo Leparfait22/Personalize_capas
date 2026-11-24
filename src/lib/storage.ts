@@ -249,13 +249,21 @@ export async function updateOrderStatusApi(orderId: string, status: Order["statu
 
 export async function fetchPhoneModelsApi(): Promise<PhoneModel[]> {
   try {
-    const res = await fetch("/api/models");
+    const res = await fetch("/api/models", { cache: "no-store" });
     if (res.ok) {
       const models: PhoneModel[] = await res.json();
-      return models.map((m) => ({
+      const enriched = models.map((m) => ({
         ...m,
         cameraModule: getEnrichedCameraModule(m),
       }));
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(STORAGE_KEYS.MODELS, JSON.stringify(enriched));
+        } catch {
+          // ignora erro de quota
+        }
+      }
+      return enriched;
     }
   } catch (err) {
     console.error("Erro ao buscar modelos da API:", err);

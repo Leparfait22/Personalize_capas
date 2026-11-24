@@ -73,6 +73,8 @@ export default function AdminDashboardPage() {
   const [isAddModelOpen, setIsAddModelOpen] = useState(false);
   const [isManageModelsOpen, setIsManageModelsOpen] = useState(false);
   const [editingModelId, setEditingModelId] = useState<string | null>(null);
+  const [modelToDelete, setModelToDelete] = useState<PhoneModel | null>(null);
+  const [customAlertMessage, setCustomAlertMessage] = useState<string | null>(null);
   const [newModelData, setNewModelData] = useState({
     brand: "Apple" as SmartphoneBrand,
     name: "",
@@ -94,7 +96,7 @@ export default function AdminDashboardPage() {
         ["in_production", "printed", "shipped", "completed"].includes(targetOrder.status));
 
     if (!isPaid) {
-      alert("A etiqueta só pode ser emitida após a confirmação do pagamento do pedido.");
+      setCustomAlertMessage("A etiqueta só pode ser emitida após a confirmação do pagamento do pedido.");
       return;
     }
 
@@ -122,11 +124,11 @@ export default function AdminDashboardPage() {
           window.open(data.labelUrl, "_blank");
         }
       } else {
-        alert(data.error || "Erro ao emitir etiqueta no Melhor Envio.");
+        setCustomAlertMessage(data.error || "Erro ao emitir etiqueta no Melhor Envio.");
       }
     } catch (err) {
       console.error("Erro ao emitir etiqueta:", err);
-      alert("Falha de conexão com a API do Melhor Envio.");
+      setCustomAlertMessage("Falha de conexão com a API do Melhor Envio.");
     } finally {
       setGeneratingLabelId(null);
     }
@@ -268,11 +270,25 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleRequestDeleteModel = (model: PhoneModel) => {
+    setModelToDelete(model);
+  };
+
   const handleDeleteModel = async (modelId: string) => {
-    if (confirm("Tem certeza que deseja remover este modelo do catálogo?")) {
-      await deletePhoneModelApi(modelId);
-      await loadData();
+    setModelToDelete(null);
+
+    // Atualização otimista imediata na tela (remove do card na mesma hora)
+    const previousModels = models;
+    setModels((prev) => prev.filter((m) => m.id !== modelId));
+
+    const ok = await deletePhoneModelApi(modelId);
+    if (!ok) {
+      setCustomAlertMessage("Não foi possível remover o modelo no servidor. Tente novamente.");
+      setModels(previousModels);
+      return;
     }
+
+    await loadData();
   };
 
   const handleEditModel = (model: PhoneModel) => {
@@ -1399,7 +1415,7 @@ export default function AdminDashboardPage() {
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDeleteModel(model.id)}
+                        onClick={() => handleRequestDeleteModel(model)}
                         title="Remover modelo"
                         className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 rounded-lg transition-colors border border-rose-200"
                       >
@@ -1428,6 +1444,73 @@ export default function AdminDashboardPage() {
                 className="px-4 py-2 bg-zinc-950 text-white rounded-xl text-xs font-bold"
               >
                 Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 4: Confirmação Personalizada para Remover Modelo */}
+      {modelToDelete && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white border border-zinc-200 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl relative text-zinc-900">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-black text-zinc-950 font-display">
+                  Remover modelo do catálogo?
+                </h3>
+                <p className="text-xs text-zinc-600 leading-relaxed">
+                  Tem certeza que deseja excluir o modelo{" "}
+                  <strong className="text-zinc-950">
+                    {modelToDelete.brand} {modelToDelete.name}
+                  </strong>{" "}
+                  do catálogo da loja?
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setModelToDelete(null)}
+                className="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-xl text-xs font-bold border border-zinc-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteModel(modelToDelete.id)}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md shadow-rose-600/20 transition-all"
+              >
+                Sim, Remover
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 5: Alerta / Aviso Personalizado */}
+      {customAlertMessage && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white border border-zinc-200 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl relative text-zinc-900">
+            <div className="space-y-1.5">
+              <h3 className="text-sm font-black text-zinc-950 font-display">
+                Aviso do Sistema
+              </h3>
+              <p className="text-xs text-zinc-600 leading-relaxed">
+                {customAlertMessage}
+              </p>
+            </div>
+            <div className="flex justify-end pt-1">
+              <button
+                type="button"
+                onClick={() => setCustomAlertMessage(null)}
+                className="px-5 py-2 bg-zinc-950 hover:bg-zinc-800 text-white rounded-xl text-xs font-bold shadow-sm transition-colors"
+              >
+                Entendi
               </button>
             </div>
           </div>

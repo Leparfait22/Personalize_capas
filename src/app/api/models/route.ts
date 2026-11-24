@@ -3,6 +3,13 @@ import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { INITIAL_PHONE_MODELS, getEnrichedCameraModule } from "@/data/catalog";
 import { PhoneModel } from "@/types";
 import { isServerAdmin } from "@/lib/auth-server";
+import { logger } from "@/lib/logger";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+// Lista em memória para fallback local (quando Supabase não está configurado)
+let inMemoryModels: PhoneModel[] = [...INITIAL_PHONE_MODELS];
 
 export async function GET() {
   try {
@@ -12,7 +19,7 @@ export async function GET() {
         .select("*")
         .order("name", { ascending: true });
 
-      if (!error && data && data.length > 0) {
+      if (!error && data) {
         const formatted: PhoneModel[] = data.map((item) => {
           const rawModel: PhoneModel = {
             id: item.id,
@@ -30,27 +37,23 @@ export async function GET() {
           return rawModel;
         });
 
-        // Garantir que todos os modelos ricos do catálogo estejam disponíveis sem duplicatas de marca
-        const normName = (name: string) =>
-          name
-            .toLowerCase()
-            .replace(/^(apple|samsung|xiaomi|motorola)\s*/gi, "")
-            .replace(/[^a-z0-9]/g, "");
-
-        const existingKeys = new Set(formatted.map((m) => normName(m.name)));
-        const additionalCatalogModels = INITIAL_PHONE_MODELS.filter(
-          (m) => !existingKeys.has(normName(m.name))
-        );
-
-        return NextResponse.json([...formatted, ...additionalCatalogModels]);
+        return NextResponse.json(formatted, {
+          headers: {
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+          },
+        });
       }
     }
   } catch (err) {
     console.error("Erro ao buscar modelos do Supabase, usando catálogo local:", err);
   }
 
-  // Fallback para catálogo inicial
-  return NextResponse.json(INITIAL_PHONE_MODELS);
+  // Fallback para catálogo em memória
+  return NextResponse.json(inMemoryModels, {
+    headers: {
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+    },
+  });
 }
 
 export async function POST(request: Request) {
@@ -89,9 +92,25 @@ export async function POST(request: Request) {
 
       if (error) {
         console.error("Erro ao salvar modelo no Supabase:", error);
+        logger.error("ADMIN", `Falha ao salvar modelo ${body.name} (${body.id})`, {
+          modelId: body.id,
+          dbError: error.message,
+        });
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
     }
+
+    inMemoryModels = [
+      ...inMemoryModels.filter((m) => m.id !== body.id),
+      body,
+    ];
+
+    logger.info("ADMIN", `Modelo salvo/atualizado no catálogo: ${body.brand} ${body.name}`, {
+      modelId: body.id,
+      brand: body.brand,
+      name: body.name,
+      basePrice: body.basePrice,
+    });
 
     return NextResponse.json({ success: true, model: body });
   } catch (err) {
@@ -124,9 +143,16 @@ export async function DELETE(request: Request) {
       const { error } = await supabase.from("phone_models").delete().eq("id", id);
       if (error) {
         console.error("Erro ao deletar modelo do Supabase:", error);
+        logger.error("ADMIN", `Falha ao remover modelo ${id} do Supabase`, {
+          modelId: id,
+          dbError: error.message,
+        });
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
     }
+
+    inMemoryModels = inMemoryModels.filter((m) => m.id !== id);
+    logger.info("ADMIN", `Modelo removido do catálogo: ${id}`, { modelId: id });
 
     return NextResponse.json({ success: true, id });
   } catch (err) {
