@@ -10,34 +10,20 @@ import {
   Upload,
   Sparkles,
 } from "lucide-react";
+import { INITIAL_GALLERY_ARTS } from "@/data/catalog";
+import { fetchGalleryItemsApi } from "@/lib/storage";
 
 export interface ShowcaseSlide {
   id: string;
   imageUrl: string;
+  name?: string;
 }
 
-const SHOWCASE_SLIDES: ShowcaseSlide[] = [
-  {
-    id: "pet-dog",
-    imageUrl: "https://images.unsplash.com/photo-1552053831-71594a27632d?w=1200&auto=format&fit=crop&q=85",
-  },
-  {
-    id: "family-love",
-    imageUrl: "https://images.unsplash.com/photo-1609220136736-443140cffec6?w=1200&auto=format&fit=crop&q=85",
-  },
-  {
-    id: "pet-cat",
-    imageUrl: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=1200&auto=format&fit=crop&q=85",
-  },
-  {
-    id: "couple-moment",
-    imageUrl: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=1200&auto=format&fit=crop&q=85",
-  },
-  {
-    id: "mother-baby",
-    imageUrl: "https://images.unsplash.com/photo-1544717305-2782549b5136?w=1200&auto=format&fit=crop&q=85",
-  },
-];
+const DEFAULT_SHOWCASE_SLIDES: ShowcaseSlide[] = INITIAL_GALLERY_ARTS.map((art) => ({
+  id: art.id,
+  imageUrl: art.imageUrl,
+  name: art.name,
+}));
 
 interface HeroBannerProps {
   onSelectPreset?: (sampleUrl: string, sampleName?: string, modelId?: string) => void;
@@ -48,31 +34,55 @@ export default function HeroBanner({
   onSelectPreset,
   onStartCustomizing,
 }: HeroBannerProps) {
+  const [slides, setSlides] = useState<ShowcaseSlide[]>(DEFAULT_SHOWCASE_SLIDES);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const touchStartX = useRef<number | null>(null);
 
-  const currentSlide = SHOWCASE_SLIDES[currentSlideIndex];
+  useEffect(() => {
+    let mounted = true;
+    fetchGalleryItemsApi().then((items) => {
+      if (!mounted || !items || items.length === 0) return;
+      const bannerItems = items.filter((item) => item.inBanner);
+      const source = bannerItems.length > 0 ? bannerItems : items;
+      setSlides(
+        source.map((item) => ({
+          id: item.id,
+          imageUrl: item.imageUrl,
+          name: item.name,
+        }))
+      );
+      setCurrentSlideIndex(0);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const safeIndex = slides.length > 0 ? currentSlideIndex % slides.length : 0;
+  const currentSlide = slides[safeIndex] || DEFAULT_SHOWCASE_SLIDES[0];
 
   // Auto-play do carrossel com pausa no hover
   useEffect(() => {
-    if (isPaused) return;
+    if (isPaused || slides.length <= 1) return;
 
     const timer = setInterval(() => {
-      setCurrentSlideIndex((prev) => (prev + 1) % SHOWCASE_SLIDES.length);
+      setCurrentSlideIndex((prev) => (prev + 1) % slides.length);
     }, 4000);
 
     return () => clearInterval(timer);
-  }, [isPaused]);
+  }, [isPaused, slides.length]);
 
   const handlePrev = () => {
+    if (slides.length === 0) return;
     setCurrentSlideIndex((prev) =>
-      prev === 0 ? SHOWCASE_SLIDES.length - 1 : prev - 1
+      prev === 0 ? slides.length - 1 : prev - 1
     );
   };
 
   const handleNext = () => {
-    setCurrentSlideIndex((prev) => (prev + 1) % SHOWCASE_SLIDES.length);
+    if (slides.length === 0) return;
+    setCurrentSlideIndex((prev) => (prev + 1) % slides.length);
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -101,7 +111,7 @@ export default function HeroBanner({
 
   const handleApplySlide = (slide: ShowcaseSlide) => {
     if (onSelectPreset) {
-      onSelectPreset(slide.imageUrl, "Exemplo Personalizado");
+      onSelectPreset(slide.imageUrl, slide.name || "Arte Selecionada");
     }
     scrollToUploadSection();
   };
@@ -303,13 +313,13 @@ export default function HeroBanner({
 
               {/* Indicadores de Paginação (Dots Minimalistas) */}
               <div className="flex items-center gap-2 mt-5">
-                {SHOWCASE_SLIDES.map((slide, index) => (
+                {slides.map((slide, index) => (
                   <button
                     key={slide.id}
                     type="button"
                     onClick={() => setCurrentSlideIndex(index)}
                     className={`h-2 rounded-full transition-all duration-300 ${
-                      index === currentSlideIndex
+                      index === safeIndex
                         ? "w-7 bg-zinc-950"
                         : "w-2 bg-zinc-300 hover:bg-zinc-400"
                     }`}

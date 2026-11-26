@@ -8,7 +8,8 @@ export async function GET() {
     if (isSupabaseConfigured()) {
       const { data, error } = await supabase
         .from("case_finishes")
-        .select("*");
+        .select("*")
+        .neq("badge", "gallery_art");
 
       if (!error && data && data.length > 0) {
         const formatted: CaseFinish[] = data.map((item) => ({

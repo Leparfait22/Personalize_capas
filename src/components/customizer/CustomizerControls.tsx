@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useRef } from "react";
-import { CustomizationConfig } from "@/types";
+import React, { useRef, useState, useEffect } from "react";
+import { CustomizationConfig, GalleryArtItem } from "@/types";
+import { INITIAL_GALLERY_ARTS } from "@/data/catalog";
+import { fetchGalleryItemsApi } from "@/lib/storage";
 import { compressAndResizeImage } from "@/lib/utils";
 import {
   Upload,
@@ -10,6 +12,7 @@ import {
   Image as ImageIcon,
   CheckCircle2,
   AlertTriangle,
+  Sparkles,
 } from "lucide-react";
 
 interface CustomizerControlsProps {
@@ -17,35 +20,31 @@ interface CustomizerControlsProps {
   onChange: (config: Partial<CustomizationConfig>) => void;
 }
 
-// Exemplos de fotos de alta resolução para teste rápido
-const SAMPLE_PHOTOS = [
-  {
-    name: "Golden Retriever",
-    url: "https://images.unsplash.com/photo-1552053831-71594a27632d?w=1200&auto=format&fit=crop&q=85",
-    thumb: "https://images.unsplash.com/photo-1552053831-71594a27632d?w=120&auto=format&fit=crop&q=80",
-  },
-  {
-    name: "Família Feliz",
-    url: "https://images.unsplash.com/photo-1609220136736-443140cffec6?w=1200&auto=format&fit=crop&q=85",
-    thumb: "https://images.unsplash.com/photo-1609220136736-443140cffec6?w=120&auto=format&fit=crop&q=80",
-  },
-  {
-    name: "Gatinho Fofo",
-    url: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=1200&auto=format&fit=crop&q=85",
-    thumb: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=120&auto=format&fit=crop&q=80",
-  },
-  {
-    name: "Casal Especial",
-    url: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=1200&auto=format&fit=crop&q=85",
-    thumb: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=120&auto=format&fit=crop&q=80",
-  },
-];
-
 export default function CustomizerControls({
   customization,
   onChange,
 }: CustomizerControlsProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [galleryArts, setGalleryArts] = useState<GalleryArtItem[]>(INITIAL_GALLERY_ARTS);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+
+  useEffect(() => {
+    let mounted = true;
+    fetchGalleryItemsApi().then((items) => {
+      if (mounted && items && items.length > 0) {
+        setGalleryArts(items);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const categories = Array.from(new Set(galleryArts.map((item) => item.category)));
+  const filteredArts =
+    selectedCategory === "all"
+      ? galleryArts
+      : galleryArts.filter((item) => item.category === selectedCategory);
 
   const handleOpenFilePicker = () => {
     fileInputRef.current?.click();
@@ -178,41 +177,93 @@ export default function CustomizerControls({
         )}
       </div>
 
-      {/* 2. Fotos de Demonstração / Presets Rápidos */}
-      <div>
-        <span className="text-xs font-semibold text-zinc-600 block mb-2">
-          Ou teste agora com uma foto de exemplo:
-        </span>
-        <div className="grid grid-cols-4 gap-2.5">
-          {SAMPLE_PHOTOS.map((sample, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() =>
-                onChange({
-                  imageUrl: sample.url,
-                  imageFileName: sample.name,
-                  scale: 1,
-                  position: { x: 0, y: 0 },
-                  rotation: 0,
-                })
-              }
-              className="group relative rounded-xl overflow-hidden border border-zinc-200 hover:border-zinc-950 focus:outline-none focus:ring-2 focus:ring-zinc-950 transition-all aspect-square shadow-sm hover:shadow-md"
-            >
-              <img
-                src={sample.thumb}
-                alt={sample.name}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-1.5">
-                <span className="text-[10px] font-semibold text-white leading-tight truncate">
-                  {sample.name.split(" ")[0]}
-                </span>
-              </div>
-            </button>
-          ))}
+      {/* 2. Galeria de Artes Pré-Prontas da Loja */}
+      {galleryArts.length > 0 && (
+        <div className="space-y-2.5 pt-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-zinc-800 flex items-center gap-1.5 font-display">
+              <Sparkles className="w-3.5 h-3.5 text-zinc-950" />
+              Ou escolha uma arte da nossa galeria:
+            </span>
+            <span className="text-[11px] text-zinc-500 font-medium">
+              {filteredArts.length} {filteredArts.length === 1 ? "arte" : "artes"}
+            </span>
+          </div>
+
+          {/* Filtro de Categorias da Galeria */}
+          {categories.length > 1 && (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+              <button
+                type="button"
+                onClick={() => setSelectedCategory("all")}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all border ${
+                  selectedCategory === "all"
+                    ? "bg-zinc-950 text-white border-zinc-950 shadow-xs"
+                    : "bg-zinc-100 text-zinc-600 border-zinc-200 hover:bg-zinc-200 hover:text-zinc-950"
+                }`}
+              >
+                Todas
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all border ${
+                    selectedCategory === cat
+                      ? "bg-zinc-950 text-white border-zinc-950 shadow-xs"
+                      : "bg-zinc-100 text-zinc-600 border-zinc-200 hover:bg-zinc-200 hover:text-zinc-950"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Grid de Artes */}
+          <div className="grid grid-cols-4 sm:grid-cols-5 gap-2.5 max-h-48 overflow-y-auto pr-0.5">
+            {filteredArts.map((art) => {
+              const isSelected = customization.imageUrl === art.imageUrl;
+              return (
+                <button
+                  key={art.id}
+                  type="button"
+                  onClick={() =>
+                    onChange({
+                      imageUrl: art.imageUrl,
+                      imageFileName: `${art.name} (${art.category})`,
+                      scale: 1,
+                      position: { x: 0, y: 0 },
+                      rotation: 0,
+                    })
+                  }
+                  className={`group relative rounded-xl overflow-hidden border transition-all aspect-square shadow-sm hover:shadow-md focus:outline-none ${
+                    isSelected
+                      ? "border-zinc-950 ring-2 ring-zinc-950"
+                      : "border-zinc-200 hover:border-zinc-950"
+                  }`}
+                  title={`${art.name} — ${art.category}`}
+                >
+                  <img
+                    src={art.thumbUrl || art.imageUrl}
+                    alt={art.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent flex flex-col justify-end p-1.5 text-left">
+                    <span className="text-[9px] font-bold text-amber-300 uppercase tracking-wider leading-none truncate">
+                      {art.category}
+                    </span>
+                    <span className="text-[10px] font-bold text-white leading-tight truncate mt-0.5">
+                      {art.name}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 3. Indicador de Qualidade da Imagem */}
       {customization.qualityRating && (

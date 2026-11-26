@@ -3,6 +3,7 @@ import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { INITIAL_PHONE_MODELS, getEnrichedCameraModule } from "@/data/catalog";
 import { PhoneModel } from "@/types";
 import { isServerAdmin } from "@/lib/auth-server";
+import { sanitizeInput } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -74,6 +75,11 @@ export async function POST(request: Request) {
         { error: "Campos obrigatórios ausentes" },
         { status: 400 }
       );
+    }
+
+    body.name = sanitizeInput(body.name);
+    if (body.tagline) {
+      body.tagline = sanitizeInput(body.tagline);
     }
 
     if (isSupabaseConfigured()) {

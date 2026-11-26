@@ -183,4 +183,15 @@ export interface Order {
   notes?: string;
 }
 
+export interface GalleryArtItem {
+  id: string;
+  name: string;
+  category: string;
+  imageUrl: string;
+  thumbUrl?: string;
+  inBanner?: boolean;
+  createdAt?: string;
+}
+
+
 

@@ -1,9 +1,15 @@
-import { Order, PhoneModel } from "@/types";
-import { INITIAL_PHONE_MODELS, CASE_FINISHES, getEnrichedCameraModule } from "@/data/catalog";
+import { Order, PhoneModel, GalleryArtItem } from "@/types";
+import {
+  INITIAL_PHONE_MODELS,
+  CASE_FINISHES,
+  INITIAL_GALLERY_ARTS,
+  getEnrichedCameraModule,
+} from "@/data/catalog";
 
 const STORAGE_KEYS = {
   ORDERS: "personalize_cases_orders_v1",
   MODELS: "personalize_cases_models_v3",
+  GALLERY: "personalize_cases_gallery_v1",
   CART: "personalize_cases_cart_v1",
 };
 
@@ -407,3 +413,88 @@ export async function deletePhoneModelApi(modelId: string): Promise<boolean> {
     return false;
   }
 }
+
+// -----------------------------------------------------------------------------
+// GALERIA DE ARTES PRÉ-PRONTAS (SUPABASE + FALLBACK LOCALSTORAGE)
+// -----------------------------------------------------------------------------
+
+export async function fetchGalleryItemsApi(): Promise<GalleryArtItem[]> {
+  try {
+    const res = await fetch("/api/gallery", { cache: "no-store" });
+    if (res.ok) {
+      const items: GalleryArtItem[] = await res.json();
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(STORAGE_KEYS.GALLERY, JSON.stringify(items));
+        } catch {
+          // ignora erro de quota
+        }
+      }
+      return items;
+    }
+  } catch (err) {
+    console.error("Erro ao carregar galeria da API:", err);
+  }
+
+  if (typeof window !== "undefined") {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.GALLERY);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignora
+    }
+  }
+  return INITIAL_GALLERY_ARTS;
+}
+
+export async function saveGalleryItemApi(
+  item: Omit<GalleryArtItem, "id"> & { id?: string }
+): Promise<GalleryArtItem | null> {
+  try {
+    const res = await fetch("/api/gallery", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(item),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.item || null;
+    }
+  } catch (err) {
+    console.error("Erro ao salvar arte na galeria:", err);
+  }
+  return null;
+}
+
+export async function deleteGalleryItemApi(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/gallery?id=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+    return res.ok;
+  } catch (err) {
+    console.error("Erro ao remover arte da galeria:", err);
+    return false;
+  }
+}
+
+export async function updateGalleryItemApi(
+  id: string,
+  updates: Partial<GalleryArtItem>
+): Promise<GalleryArtItem | null> {
+  try {
+    const res = await fetch("/api/gallery", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, ...updates }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.item || null;
+    }
+  } catch (err) {
+    console.error("Erro ao atualizar arte da galeria:", err);
+  }
+  return null;
+}
+

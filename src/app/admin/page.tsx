@@ -9,9 +9,13 @@ import {
   fetchPhoneModelsApi,
   saveNewPhoneModelApi,
   deletePhoneModelApi,
+  fetchGalleryItemsApi,
+  saveGalleryItemApi,
+  deleteGalleryItemApi,
+  updateGalleryItemApi,
 } from "@/lib/storage";
-import { Order, OrderStatus, PhoneModel, SmartphoneBrand } from "@/types";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { Order, OrderStatus, PhoneModel, SmartphoneBrand, GalleryArtItem } from "@/types";
+import { formatCurrency, formatDate, compressAndResizeImage } from "@/lib/utils";
 import {
   Download,
   Eye,
@@ -41,6 +45,7 @@ import {
   Pencil,
   Image as ImageIcon,
   Tag,
+  Star,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -56,6 +61,18 @@ export default function AdminDashboardPage() {
   const [isSubmittingPageLogin, setIsSubmittingPageLogin] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [models, setModels] = useState<PhoneModel[]>([]);
+  const [galleryItems, setGalleryItems] = useState<GalleryArtItem[]>([]);
+  const [isManageGalleryOpen, setIsManageGalleryOpen] = useState(false);
+  const [galleryFilterCat, setGalleryFilterCat] = useState<string>("all");
+  const [editingArtId, setEditingArtId] = useState<string | null>(null);
+  const [newArtData, setNewArtData] = useState({
+    name: "",
+    category: "Futebol",
+    imageUrl: "",
+    inBanner: true,
+  });
+  const [isSavingArt, setIsSavingArt] = useState(false);
+  const [artToDelete, setArtToDelete] = useState<GalleryArtItem | null>(null);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [dateFilter, setDateFilter] = useState<"yesterday" | "today" | "week" | "all">("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -143,10 +160,14 @@ export default function AdminDashboardPage() {
   const loadData = async () => {
     setIsLoadingOrders(true);
     try {
-      const fetchedOrders = await fetchSavedOrders();
-      const fetchedModels = await fetchPhoneModelsApi();
+      const [fetchedOrders, fetchedModels, fetchedGallery] = await Promise.all([
+        fetchSavedOrders(),
+        fetchPhoneModelsApi(),
+        fetchGalleryItemsApi(),
+      ]);
       setOrders(fetchedOrders);
       setModels(fetchedModels);
+      setGalleryItems(fetchedGallery);
     } catch (err) {
       console.error("Erro ao carregar dados do painel administrativo:", err);
     } finally {
@@ -289,6 +310,115 @@ export default function AdminDashboardPage() {
     }
 
     await loadData();
+  };
+
+  const handleArtFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressAndResizeImage(file, 1600);
+      setNewArtData((prev) => ({
+        ...prev,
+        imageUrl: compressed.dataUrl,
+        name: prev.name || file.name.replace(/\.(png|jpe?g|webp)$/i, ""),
+      }));
+    } catch {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        if (ev.target?.result) {
+          setNewArtData((prev) => ({
+            ...prev,
+            imageUrl: ev.target!.result as string,
+          }));
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCreateGalleryArt = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newArtData.name.trim() || !newArtData.imageUrl.trim()) {
+      setCustomAlertMessage("Preencha o nome da arte e selecione uma imagem.");
+      return;
+    }
+
+    setIsSavingArt(true);
+    try {
+      if (editingArtId) {
+        const updated = await updateGalleryItemApi(editingArtId, {
+          name: newArtData.name.trim(),
+          category: newArtData.category.trim() || "Geral",
+          imageUrl: newArtData.imageUrl.trim(),
+          inBanner: newArtData.inBanner,
+        });
+        if (updated) {
+          setGalleryItems((prev) =>
+            prev.map((item) => (item.id === editingArtId ? updated : item))
+          );
+          setEditingArtId(null);
+          setNewArtData({ name: "", category: newArtData.category, imageUrl: "", inBanner: true });
+        } else {
+          setCustomAlertMessage("Não foi possível atualizar a arte.");
+        }
+      } else {
+        const created = await saveGalleryItemApi({
+          name: newArtData.name.trim(),
+          category: newArtData.category.trim() || "Geral",
+          imageUrl: newArtData.imageUrl.trim(),
+          inBanner: newArtData.inBanner,
+        });
+
+        if (created) {
+          setGalleryItems((prev) => [...prev.filter((i) => i.id !== created.id), created]);
+          setNewArtData({ name: "", category: newArtData.category, imageUrl: "", inBanner: true });
+        } else {
+          setCustomAlertMessage("Não foi possível salvar a arte na galeria.");
+        }
+      }
+    } finally {
+      setIsSavingArt(false);
+    }
+  };
+
+  const handleEditGalleryArt = (art: GalleryArtItem) => {
+    setEditingArtId(art.id);
+    setNewArtData({
+      name: art.name,
+      category: art.category,
+      imageUrl: art.imageUrl,
+      inBanner: Boolean(art.inBanner),
+    });
+  };
+
+  const handleToggleArtBanner = async (art: GalleryArtItem) => {
+    const nextInBanner = !art.inBanner;
+    const previous = galleryItems;
+    setGalleryItems((prev) =>
+      prev.map((item) => (item.id === art.id ? { ...item, inBanner: nextInBanner } : item))
+    );
+
+    const updated = await updateGalleryItemApi(art.id, { inBanner: nextInBanner });
+    if (!updated) {
+      setCustomAlertMessage("Não foi possível atualizar o destaque no banner.");
+      setGalleryItems(previous);
+    }
+  };
+
+  const handleDeleteGalleryArt = async (artId: string) => {
+    setArtToDelete(null);
+    if (editingArtId === artId) {
+      setEditingArtId(null);
+      setNewArtData({ name: "", category: "Futebol", imageUrl: "", inBanner: true });
+    }
+    const previous = galleryItems;
+    setGalleryItems((prev) => prev.filter((item) => item.id !== artId));
+
+    const ok = await deleteGalleryItemApi(artId);
+    if (!ok) {
+      setCustomAlertMessage("Não foi possível remover a arte da galeria.");
+      setGalleryItems(previous);
+    }
   };
 
   const handleEditModel = (model: PhoneModel) => {
@@ -596,6 +726,14 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+            <button
+              onClick={() => setIsManageGalleryOpen(true)}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-xl text-xs font-bold border border-zinc-200 transition-colors shadow-sm"
+            >
+              <ImageIcon className="w-4 h-4 text-zinc-950" />
+              Galeria de Artes ({galleryItems.length})
+            </button>
+
             <button
               onClick={() => setIsManageModelsOpen(true)}
               className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-xl text-xs font-bold border border-zinc-200 transition-colors shadow-sm"
@@ -1511,6 +1649,354 @@ export default function AdminDashboardPage() {
                 className="px-5 py-2 bg-zinc-950 hover:bg-zinc-800 text-white rounded-xl text-xs font-bold shadow-sm transition-colors"
               >
                 Entendi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 6: Gerenciar Galeria de Artes & Carrossel do Banner Principal */}
+      {isManageGalleryOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white border border-zinc-200 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl relative text-zinc-900 max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => {
+                setIsManageGalleryOpen(false);
+                setEditingArtId(null);
+              }}
+              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-900 p-1 rounded-lg hover:bg-zinc-100"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-zinc-950 text-white flex items-center justify-center shadow-sm">
+                <ImageIcon className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-zinc-950 font-display">
+                  Galeria de Artes & Carrossel do Banner ({galleryItems.length})
+                </h3>
+                <p className="text-xs text-zinc-500">
+                  Gerencie as artes por categoria e escolha quais aparecem no Carrossel do Banner Principal.
+                </p>
+              </div>
+            </div>
+
+            {/* Formulário de Nova Arte / Editar Arte */}
+            <form
+              onSubmit={handleCreateGalleryArt}
+              className="p-4 bg-zinc-50 rounded-xl border border-zinc-200 space-y-3 text-xs"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-zinc-950 block font-display">
+                  {editingArtId
+                    ? "✏️ Editando Arte / Imagem do Banner"
+                    : "+ Adicionar Nova Arte ou Imagem do Banner"}
+                </span>
+                {editingArtId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingArtId(null);
+                      setNewArtData({ name: "", category: "Futebol", imageUrl: "", inBanner: true });
+                    }}
+                    className="text-[11px] font-bold text-zinc-500 hover:text-zinc-950 underline"
+                  >
+                    Cancelar edição
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-zinc-700 font-semibold mb-1">
+                    Nome da Arte *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: Camisa 10 Futebol / Bulldog"
+                    value={newArtData.name}
+                    onChange={(e) =>
+                      setNewArtData({ ...newArtData, name: e.target.value })
+                    }
+                    className="w-full bg-white border border-zinc-200 rounded-xl px-3 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-950"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-zinc-700 font-semibold mb-1">
+                    Categoria / Tema *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: Futebol, Pets, Estampas..."
+                    value={newArtData.category}
+                    onChange={(e) =>
+                      setNewArtData({ ...newArtData, category: e.target.value })
+                    }
+                    className="w-full bg-white border border-zinc-200 rounded-xl px-3 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-950"
+                  />
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {["Futebol", "Pets", "Estampas", "Anime & Geek", "Casal & Família"].map(
+                      (presetCat) => (
+                        <button
+                          key={presetCat}
+                          type="button"
+                          onClick={() =>
+                            setNewArtData({ ...newArtData, category: presetCat })
+                          }
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors ${
+                            newArtData.category === presetCat
+                              ? "bg-zinc-950 text-white border-zinc-950"
+                              : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-100"
+                          }`}
+                        >
+                          {presetCat}
+                        </button>
+                      )
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Opção de Destacar no Carrossel do Banner Principal */}
+              <label className="flex items-center gap-2.5 pt-1 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={newArtData.inBanner}
+                  onChange={(e) =>
+                    setNewArtData({ ...newArtData, inBanner: e.target.checked })
+                  }
+                  className="w-4 h-4 rounded border-zinc-300 text-zinc-950 focus:ring-zinc-950"
+                />
+                <span className="text-xs font-bold text-zinc-800 flex items-center gap-1">
+                  <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
+                  Exibir também no Carrossel do Banner Principal (Topo da Loja)
+                </span>
+              </label>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                <div className="flex items-center gap-3">
+                  <label className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-zinc-100 text-zinc-900 border border-zinc-300 rounded-xl text-xs font-bold cursor-pointer transition-colors shadow-xs">
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>
+                      {editingArtId ? "Trocar Imagem" : "Escolher Imagem do Computador/Celular"}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleArtFileSelect}
+                      className="sr-only"
+                    />
+                  </label>
+
+                  {newArtData.imageUrl && (
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={newArtData.imageUrl}
+                        alt="Preview nova arte"
+                        className="w-9 h-9 rounded-lg object-cover border border-zinc-300"
+                      />
+                      <span className="text-[11px] text-emerald-700 font-bold">
+                        Imagem pronta!
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSavingArt || !newArtData.imageUrl}
+                  className="px-4 py-2 bg-zinc-950 hover:bg-zinc-800 disabled:bg-zinc-300 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+                >
+                  {isSavingArt
+                    ? "Salvando no R2..."
+                    : editingArtId
+                    ? "Salvar Alterações"
+                    : "Adicionar à Galeria"}
+                </button>
+              </div>
+            </form>
+
+            {/* Filtro por Categoria ou Carrossel do Banner */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                <button
+                  type="button"
+                  onClick={() => setGalleryFilterCat("all")}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all whitespace-nowrap ${
+                    galleryFilterCat === "all"
+                      ? "bg-zinc-950 text-white border-zinc-950"
+                      : "bg-zinc-100 text-zinc-600 border-zinc-200 hover:bg-zinc-200"
+                  }`}
+                >
+                  Todas ({galleryItems.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGalleryFilterCat("__banner__")}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all whitespace-nowrap flex items-center gap-1 ${
+                    galleryFilterCat === "__banner__"
+                      ? "bg-amber-500 text-white border-amber-500"
+                      : "bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100"
+                  }`}
+                >
+                  <Star className="w-3 h-3 fill-current" />
+                  <span>
+                    Carrossel do Banner ({galleryItems.filter((i) => i.inBanner).length})
+                  </span>
+                </button>
+                {Array.from(new Set(galleryItems.map((i) => i.category))).map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setGalleryFilterCat(cat)}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all whitespace-nowrap ${
+                      galleryFilterCat === cat
+                        ? "bg-zinc-950 text-white border-zinc-950"
+                        : "bg-zinc-100 text-zinc-600 border-zinc-200 hover:bg-zinc-200"
+                    }`}
+                  >
+                    {cat} ({galleryItems.filter((i) => i.category === cat).length})
+                  </button>
+                ))}
+              </div>
+
+              {/* Grid de Artes Cadastradas */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-72 overflow-y-auto p-1">
+                {galleryItems
+                  .filter((item) => {
+                    if (galleryFilterCat === "all") return true;
+                    if (galleryFilterCat === "__banner__") return Boolean(item.inBanner);
+                    return item.category === galleryFilterCat;
+                  })
+                  .map((art) => (
+                    <div
+                      key={art.id}
+                      className={`group relative rounded-xl overflow-hidden border bg-zinc-50 flex flex-col justify-between shadow-xs transition-all ${
+                        editingArtId === art.id
+                          ? "border-zinc-950 ring-2 ring-zinc-950"
+                          : "border-zinc-200"
+                      }`}
+                    >
+                      <div className="aspect-square w-full overflow-hidden bg-zinc-200 relative">
+                        <img
+                          src={art.thumbUrl || art.imageUrl}
+                          alt={art.name}
+                          className="w-full h-full object-cover"
+                        />
+                        <span className="absolute top-1.5 left-1.5 bg-black/75 text-white text-[9px] font-bold uppercase px-1.5 py-0.5 rounded backdrop-blur-xs">
+                          {art.category}
+                        </span>
+
+                        {/* Botões Editar e Excluir */}
+                        <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleEditGalleryArt(art)}
+                            title="Editar imagem, nome ou categoria"
+                            className="p-1.5 rounded-lg bg-white/90 hover:bg-zinc-950 text-zinc-800 hover:text-white transition-colors shadow-sm"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setArtToDelete(art)}
+                            title="Excluir arte da galeria"
+                            className="p-1.5 rounded-lg bg-white/90 hover:bg-rose-600 text-rose-600 hover:text-white transition-colors shadow-sm"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        {/* Botão rápido para colocar / tirar do Carrossel do Banner */}
+                        <button
+                          type="button"
+                          onClick={() => handleToggleArtBanner(art)}
+                          title={
+                            art.inBanner
+                              ? "Clique para remover do Carrossel do Banner Principal"
+                              : "Clique para exibir no Carrossel do Banner Principal"
+                          }
+                          className={`absolute bottom-1.5 left-1.5 right-1.5 py-1 px-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all shadow-sm ${
+                            art.inBanner
+                              ? "bg-amber-400 text-zinc-950 hover:bg-amber-300"
+                              : "bg-black/70 text-white hover:bg-black/85"
+                          }`}
+                        >
+                          <Star
+                            className={`w-3 h-3 ${
+                              art.inBanner ? "fill-zinc-950 text-zinc-950" : "text-amber-300"
+                            }`}
+                          />
+                          <span>{art.inBanner ? "No Banner Principal" : "Colocar no Banner"}</span>
+                        </button>
+                      </div>
+                      <div className="p-2">
+                        <p className="text-xs font-bold text-zinc-900 truncate">
+                          {art.name}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-zinc-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsManageGalleryOpen(false);
+                  setEditingArtId(null);
+                }}
+                className="px-5 py-2 bg-zinc-950 text-white rounded-xl text-xs font-bold"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 7: Confirmação Personalizada para Excluir Arte da Galeria */}
+      {artToDelete && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white border border-zinc-200 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl relative text-zinc-900">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-black text-zinc-950 font-display">
+                  Remover arte da galeria?
+                </h3>
+                <p className="text-xs text-zinc-600 leading-relaxed">
+                  Tem certeza que deseja excluir a arte{" "}
+                  <strong className="text-zinc-950">
+                    {artToDelete.name} ({artToDelete.category})
+                  </strong>{" "}
+                  da galeria da loja?
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setArtToDelete(null)}
+                className="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-xl text-xs font-bold border border-zinc-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteGalleryArt(artToDelete.id)}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md shadow-rose-600/20 transition-all"
+              >
+                Sim, Remover
               </button>
             </div>
           </div>

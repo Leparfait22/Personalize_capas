@@ -1,4 +1,4 @@
-import { PhoneModel, CaseFinish, CameraModuleConfig } from "@/types";
+import { PhoneModel, CaseFinish, CameraModuleConfig, GalleryArtItem } from "@/types";
 
 export const INITIAL_PHONE_MODELS: PhoneModel[] = [
   // --- APPLE ---
@@ -530,6 +530,49 @@ export const CASE_COLORS = [
   { id: "emerald", name: "Verde Militar", hex: "#065f46", textColor: "#ffffff" },
   { id: "purple", name: "Roxo Imperial", hex: "#6b21a8", textColor: "#ffffff" },
   { id: "wine", name: "Bordô / Vinho", hex: "#881337", textColor: "#ffffff" },
+];
+
+export const INITIAL_GALLERY_ARTS: GalleryArtItem[] = [
+  {
+    id: "gallery-pet-golden",
+    name: "Golden Retriever",
+    category: "Pets",
+    imageUrl: "https://images.unsplash.com/photo-1552053831-71594a27632d?w=1200&auto=format&fit=crop&q=85",
+    thumbUrl: "https://images.unsplash.com/photo-1552053831-71594a27632d?w=240&auto=format&fit=crop&q=80",
+    inBanner: true,
+  },
+  {
+    id: "gallery-pet-cat",
+    name: "Gatinho Fofo",
+    category: "Pets",
+    imageUrl: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=1200&auto=format&fit=crop&q=85",
+    thumbUrl: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=240&auto=format&fit=crop&q=80",
+    inBanner: true,
+  },
+  {
+    id: "gallery-futebol-ball",
+    name: "Paixão por Futebol",
+    category: "Futebol",
+    imageUrl: "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=1200&auto=format&fit=crop&q=85",
+    thumbUrl: "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=240&auto=format&fit=crop&q=80",
+    inBanner: true,
+  },
+  {
+    id: "gallery-futebol-stadium",
+    name: "Noite de Estádio",
+    category: "Futebol",
+    imageUrl: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1200&auto=format&fit=crop&q=85",
+    thumbUrl: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=240&auto=format&fit=crop&q=80",
+    inBanner: true,
+  },
+  {
+    id: "gallery-estampa-neon",
+    name: "Arte Abstrata Neon",
+    category: "Estampas",
+    imageUrl: "https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=1200&auto=format&fit=crop&q=85",
+    thumbUrl: "https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=240&auto=format&fit=crop&q=80",
+    inBanner: true,
+  },
 ];
 
 /**
